@@ -19,3 +19,5 @@ def view_test(request):
                 "message": "Usuário não foi encontrado"},
                 status=status.HTTP_404_NOT_FOUND)
 
+
+
