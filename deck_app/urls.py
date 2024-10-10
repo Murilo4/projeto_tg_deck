@@ -1,6 +1,8 @@
 from django.urls import path
-from .views import view_test
+from .views.create import create_deck
+from .views.deck_management import get_all_decks
 
 urlpatterns = [
-    path('view/', view_test, name="view_test")
+    path('create-deck/', create_deck, name="create_deck"),
+    path('get-decks/', get_all_decks, name="get_decks")
 ]

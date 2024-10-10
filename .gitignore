@@ -1,5 +1,6 @@
 ca.pem
 .gitignore
+deck_app/__pycache__
 __pycache__/
 .env
 .mypy_cache
