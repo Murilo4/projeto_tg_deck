@@ -22,10 +22,9 @@ class PersonDeckUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Deck
         fields = (
-            'deck_name', 'favorite', 'situation',
-            'description_deck', 'new_deck', 'learning',
-            #'color', 
-            'review', 'img_url'
+            'id', 'type_deck', 'title', 'description_deck',
+            'color_predefinition', 'reviews', 'image',
+            'stars', 'public', 'allow_copy'
         )
 
     def update(self, instance, validated_data):
