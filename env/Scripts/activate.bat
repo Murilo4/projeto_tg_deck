@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=C:\Users\murilo\Documents\tg\projeto_tg_back_end_deck\env
+set VIRTUAL_ENV=C:\Users\murilo\Documents\tg\projeto_tg_deck\env
 
 if not defined PROMPT set PROMPT=$P$G
 

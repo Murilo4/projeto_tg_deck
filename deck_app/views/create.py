@@ -6,7 +6,6 @@ from rest_framework import exceptions
 from ..serializers import PersonDeckSerializer
 from ..serializers import UserDeckSerializer, CreateStandardDecks
 import requests
-from ..models import Deck
 from django.core.exceptions import ValidationError
 from ..validate import validate_jwt
 
@@ -78,7 +77,8 @@ def create_deck(request):
                     if serializer_user_deck.is_valid(raise_exception=True):
                         serializer_user_deck.save()
                         return JsonResponse({'success': True,
-                                            'message': 'Deck criado com sucesso'},
+                                            'message':
+                                             'Deck criado com sucesso'},
                                             status=status.HTTP_201_CREATED)
                 else:
                     return JsonResponse({'success': False,
