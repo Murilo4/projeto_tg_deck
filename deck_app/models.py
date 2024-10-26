@@ -23,6 +23,33 @@ class Deck(models.Model):
         db_table = 'deck'
 
 
+class UserDeck(models.Model):
+    deck_id = models.IntegerField(primary_key=True)
+    user_id = models.IntegerField()
+    # Permitir null ou definir 0 como padrão
+    learning = models.IntegerField(null=True, default=0)
+    # Permitir null ou definir 0 como padrão
+    reviewing = models.IntegerField(null=True, default=0)
+    # Permitir null ou definir 0 como padrão
+    new_deck = models.IntegerField(null=True, default=0)
+    # Permitir null ou definir False como padrão
+    favorite = models.BooleanField(null=True, default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        # Valida o user_id ao tentar salvar o deck
+        response = requests.get(
+            f'http://ec2-54-94-30-193.sa-east-1.compute.amazonaws.com:8000/get-user-to-deck/{self.user_id}/')
+        if response.status_code == 404:
+            raise ValidationError(f'Usuário com ID {self.user_id} não existe.')
+
+    class Meta:
+        managed = True
+        unique_together = (('user_id', 'deck_id'),)
+        db_table = 'user_deck'
+
+
 class DeckFlashCard(models.Model):
     deck_id = models.IntegerField(null=False)
     flashcard_id = models.IntegerField(null=False)
@@ -84,31 +111,6 @@ class Pronunciation(models.Model):
         db_table = 'pronunciation'
 
 
-class UserDeck(models.Model):
-    deck_id = models.IntegerField()
-    user_id = models.IntegerField()
-    learning = models.IntegerField(null=True, default=0)  # Permitir null ou definir 0 como padrão
-    reviewing = models.IntegerField(null=True, default=0)  # Permitir null ou definir 0 como padrão
-    new_deck = models.IntegerField(null=True, default=0)  # Permitir null ou definir 0 como padrão
-    favorite = models.BooleanField(null=True, default=False)  # Permitir null ou definir False como padrão
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def clean(self):
-        # Valida o user_id ao tentar salvar o deck
-        response = requests.get(
-            f'http://ec2-54-94-30-193.sa-east-1.compute.amazonaws.com:8000/get-user-to-deck/{self.user_id}/')
-        if response.status_code == 404:
-            raise ValidationError(f'Usuário com ID {self.user_id} não existe.')
-
-    class Meta:
-        unique_together = (('user_id', 'deck_id'),)
-        constraints = [
-            models.UniqueConstraint(fields=['user_id', 'deck_id'], name='unique_user_deck')
-        ]
-        db_table = 'user_deck'
-
-
 class UserDeckPreferences(models.Model):
     deck_id = models.IntegerField(null=False)
     user_id = models.IntegerField(null=False)
@@ -123,13 +125,14 @@ class UserDeckPreferences(models.Model):
 
 
 class UserFlashCard(models.Model):
-    deck_flashcard_id = models.IntegerField(null=False)
+    deck_flashcard_id = models.IntegerField(primary_key=True)
     user_id = models.IntegerField(null=False)
     situation = models.CharField(max_length=50)
-    two_star = models.IntegerField(default=None)
-    three_star = models.IntegerField(default=None)
-    four_star = models.IntegerField(default=None)
-    five_star = models.IntegerField(default=None)
+    one_star = models.IntegerField(default=None)
+    two_stars = models.IntegerField(default=None)
+    three_stars = models.IntegerField(default=None)
+    four_stars = models.IntegerField(default=None)
+    five_stars = models.IntegerField(default=None)
     last_feedback = models.IntegerField(default=None)
     last_time = models.DateTimeField(default=None)
     next_time = models.DateTimeField(default=None)

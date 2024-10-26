@@ -9,12 +9,16 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 def blacklist_jwt(token):
     # Calcular o tempo restante de expiração
     try:
-        decoded_data = jwt.decode(token, SECRET_KEY, algorithms=["HS256"], options={"verify_exp": False})
+        decoded_data = jwt.decode(
+            token, SECRET_KEY, algorithms=["HS256"], options={
+                "verify_exp": False})
         exp_timestamp = decoded_data.get("exp")
         exp_datetime = datetime.fromtimestamp(exp_timestamp, timezone.utc)
-        time_to_expire = (exp_datetime - datetime.now(timezone.utc)).total_seconds()
+        time_to_expire = (exp_datetime - datetime.now(
+            timezone.utc)).total_seconds()
         token_hash = hashlib.md5(token.encode()).hexdigest()
-        cache.set(f'blacklisted_token_{token_hash}', True, timeout=int(time_to_expire))
+        cache.set(f'blacklisted_token_{token_hash}', True, timeout=int(
+            time_to_expire))
     except jwt.InvalidTokenError:
         pass
 

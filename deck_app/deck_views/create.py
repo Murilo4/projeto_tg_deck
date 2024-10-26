@@ -3,11 +3,10 @@ from django.http import JsonResponse
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import exceptions
-from ..serializers import PersonDeckSerializer
-from ..serializers import UserDeckSerializer, CreateStandardDecks
-import requests
-from django.core.exceptions import ValidationError
-from ..validate import validate_jwt
+from ..serializers_deck import PersonDeckSerializer, UDPreferencesSerializer
+from ..serializers_deck import UserDeckSerializer, CreateStandardDecks
+from ..validation.validation_session import validate_session
+from ..validation.validation_jwt import validate_jwt
 
 
 @csrf_exempt
@@ -15,14 +14,9 @@ from ..validate import validate_jwt
 def create_deck(request):
     if request.method == 'POST':
         try:
-            response = requests.post(
-                f'http://ec2-54-94-30-193.sa-east-1.compute.amazonaws.com:8000/validate-token/')
-            if response.status_code == 404:
-                raise ValidationError(f'Não foi possivel validar o token.')
+            validate_session()
 
             token = request.headers.get('Authorization')
-            if token.startswith("Bearer "):
-                token = token[7:]
             jwt_data = validate_jwt(token)
 
             user_id = jwt_data.get('id')
@@ -32,6 +26,9 @@ def create_deck(request):
             color = request.data.get('color')
             type_deck = request.data.get('typedeck')
             difficult = request.data.get('difficult')
+            new = request.data.get("new")
+            learning = request.data.get('learning')
+            review = request.data.get('review')
 
             if not difficult:
                 difficult = None
@@ -56,6 +53,13 @@ def create_deck(request):
                                     'message': 'Image URL is required'},
                                     status=status.HTTP_400_BAD_REQUEST
                                     )
+            if not new:
+                new = 0
+            if not learning:
+                learning = 0
+            if not review:
+                review = 0
+
             if type_deck == "Custom":
                 new_deck = {
                     'title': deck_name,
@@ -76,10 +80,20 @@ def create_deck(request):
 
                     if serializer_user_deck.is_valid(raise_exception=True):
                         serializer_user_deck.save()
-                        return JsonResponse({'success': True,
-                                            'message':
-                                             'Deck criado com sucesso'},
-                                            status=status.HTTP_201_CREATED)
+                        preferences = {'user_id': user_id,
+                                       'deck_id': deck_id,
+                                       'new_per_day': new,
+                                       'learning_per_day': learning,
+                                       'review_per_day': review}
+                        user_deck_preferences = UDPreferencesSerializer(
+                            data=preferences)
+                        if user_deck_preferences.is_valid(
+                                raise_exception=True):
+                            user_deck_preferences.save()
+                            return JsonResponse({'success': True,
+                                                'message':
+                                                 'Deck criado com sucesso'},
+                                                status=status.HTTP_201_CREATED)
                 else:
                     return JsonResponse({'success': False,
                                         'message':
