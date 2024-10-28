@@ -25,11 +25,7 @@ SECRET_KEY = 'django-insecure-7i&suu2ti$p%wv(15z_d@5k0h7jg)$^2kj38$w7)d4sujvdvde
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["http://localhost:3000",
-                 "http://localhost:8000",
-                 "http://localhost:8001",
-                 "https://projeto-tg-deck.onrender.com",
-                 "https://flashvibe.onrender.com"]
+ALLOWED_HOSTS = ["projeto-tg-deck.onrender.com"]
 
 
 # Application definition
@@ -62,8 +58,19 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
     "http://localhost:8001",
     "https://projeto-tg-deck.onrender.com",
-    "https://flashvibe.onrender.com"
+    "https://flashvibe.onrender.com",
+    "https://projeto-tg-back-end.onrender.com"
 ]
+
+# # HSTS (HTTP Strict Transport Security)
+SECURE_HSTS_SECONDS = 3600  # 1 hora
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# Protege cookies em conexões seguras
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
