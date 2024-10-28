@@ -16,7 +16,14 @@ def create_deck(request):
         try:
             validate_session()
 
-            token = request.headers.get('Authorization')
+            token = request.headers.get('jwt_token')
+            if not token:
+                return JsonResponse({
+                    'success': False,
+                    'message':
+                    'Token de autorização ausente. Faça login novamente.'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
             jwt_data = validate_jwt(token)
 
             user_id = jwt_data.get('id')

@@ -18,7 +18,14 @@ def create_flashcard(request):
             deck_id = request.data.get('deckId')
             validate_session()
 
-            token = request.COOKIES.get('Authorization')
+            token = request.COOKIES.get('jwt_token')
+            if not token:
+                return JsonResponse({
+                    'success': False,
+                    'message':
+                    'Token de autorização ausente. Faça login novamente.'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
             jwt_data = validate_jwt(token)
 
             user_id = jwt_data.get('id')
