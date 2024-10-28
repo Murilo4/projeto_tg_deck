@@ -139,8 +139,3 @@ class UserFlashCard(models.Model):
 
     class Meta:
         db_table = 'user_flashcard'
-
-    def __str__(self):
-        return f"User: {self.user_id}, Flashcard: {
-            self.deck_flashcard.flashcard.keyword}, Situation: {
-                self.situation}"
