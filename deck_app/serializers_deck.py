@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from .models import Deck, UserDeckPreferences
-from .models import UserDeck
 from datetime import datetime
+from .models import UserFlashCard, UserDeck, DeckFlashCard
+from django.db.models import Max
 
 
 class PersonDeckSerializer(serializers.ModelSerializer):
@@ -10,7 +11,7 @@ class PersonDeckSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'type_deck', 'title', 'description_deck',
             'color_predefinition', 'reviews', 'image',
-            'stars', 'public', 'allow_copy'
+            'stars', 'public', 'allow_copy', 'new_deck'
         )
 
     def create(self, validated_data):
@@ -56,6 +57,9 @@ class PersonDeckGetSerializer(serializers.ModelSerializer):
     description = serializers.CharField(source="description_deck")
     lastModification = serializers.SerializerMethodField()
     createdData = serializers.SerializerMethodField()
+    favorite = serializers.SerializerMethodField()
+    flashcards = serializers.SerializerMethodField()
+    last_time = serializers.SerializerMethodField()
 
     class Meta:
         model = Deck
@@ -63,8 +67,19 @@ class PersonDeckGetSerializer(serializers.ModelSerializer):
             'id', 'type', 'colorPredefinition', 'title',
             'image', 'lastModification', 'createdData',
             'description', 'public', 'difficult', 'stars',
-            'reviews'
+            'reviews', 'favorite', 'flashcards',
+            'last_time'
         )
+
+    def get_last_time(self, obj):
+        # Aqui você busca o último UserFlashCard relacionado
+        last_time_entry = UserFlashCard.objects.filter(
+            deck_flashcard__deck=obj).order_by('-last_time').first()
+        return last_time_entry.last_time if last_time_entry else None
+
+    def get_flashcards(self, obj):
+        # Corrige a relação para contar o número de flashcards associados ao deck
+        return DeckFlashCard.objects.filter(deck=obj).count()
 
     def get_lastModification(self, obj):
         # Calcula a diferença de dias entre 'updated_at' e o tempo atual
@@ -77,6 +92,21 @@ class PersonDeckGetSerializer(serializers.ModelSerializer):
         now = datetime.now(obj.created_at.tzinfo)
         delta = now - obj.created_at
         return delta.days
+
+    def get_last_study_time(self, obj):
+        user_id = self.context.get('user_id')
+        # Encontra o último tempo de estudo do usuário para o deck
+        last_study = UserFlashCard.objects.filter(
+            deck_flashcard__deck_id=obj.id,
+            user_id=user_id
+        ).aggregate(last_time=Max('last_time'))['last_time']
+        return last_study
+
+    def get_favorite(self, obj):
+        user_id = self.context.get('user_id')
+        # Verifica se o deck é favorito para o usuário
+        user_deck = UserDeck.objects.filter(deck_id=obj.id, user_id=user_id).first()
+        return user_deck.favorite if user_deck else None
 
 
 class PersonDeckGetStandardSerializer(serializers.ModelSerializer):

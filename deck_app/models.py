@@ -24,15 +24,11 @@ class Deck(models.Model):
 
 
 class UserDeck(models.Model):
-    deck_id = models.IntegerField(primary_key=True)
-    user_id = models.IntegerField()
-    # Permitir null ou definir 0 como padrão
+    deck = models.ForeignKey(Deck, on_delete=models.CASCADE)
+    user_id = models.IntegerField(primary_key=True)
     learning = models.IntegerField(null=True, default=0)
-    # Permitir null ou definir 0 como padrão
     reviewing = models.IntegerField(null=True, default=0)
-    # Permitir null ou definir 0 como padrão
     new_deck = models.IntegerField(null=True, default=0)
-    # Permitir null ou definir False como padrão
     favorite = models.BooleanField(null=True, default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -48,16 +44,6 @@ class UserDeck(models.Model):
         managed = True
         unique_together = (('user_id', 'deck_id'),)
         db_table = 'user_deck'
-
-
-class DeckFlashCard(models.Model):
-    deck_id = models.IntegerField(null=False)
-    flashcard_id = models.IntegerField(null=False)
-    created_at = models.DateTimeField(auto_now=True)
-    updated_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'deck_flashcard'
 
 
 class DeckFlashCardExample(models.Model):
@@ -89,6 +75,17 @@ class FlashCard(models.Model):
         db_table = 'flashcard'
 
 
+class DeckFlashCard(models.Model):
+    deck = models.ForeignKey(Deck,
+                             on_delete=models.CASCADE)
+    flashcard = models.ForeignKey(FlashCard, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'deck_flashcard'
+
+
 class FlashCardPriority(models.Model):
     deck_flashcard_id = models.IntegerField(null=False)
     user_id = models.IntegerField(null=False)
@@ -112,8 +109,8 @@ class Pronunciation(models.Model):
 
 
 class UserDeckPreferences(models.Model):
-    deck_id = models.IntegerField(null=False)
-    user_id = models.IntegerField(null=False)
+    deck = models.ForeignKey(Deck, on_delete=models.CASCADE)
+    user_id = models.IntegerField(primary_key=True)
     new_per_day = models.IntegerField(default=None)
     learning_per_day = models.IntegerField(default=None)
     review_per_day = models.IntegerField(default=None)
@@ -125,8 +122,9 @@ class UserDeckPreferences(models.Model):
 
 
 class UserFlashCard(models.Model):
-    deck_flashcard_id = models.IntegerField(primary_key=True)
-    user_id = models.IntegerField(null=False)
+    deck_flashcard = models.ForeignKey(
+        DeckFlashCard, on_delete=models.CASCADE)
+    user_id = models.IntegerField(primary_key=True)
     situation = models.CharField(max_length=50)
     one_star = models.IntegerField(default=None)
     two_stars = models.IntegerField(default=None)
@@ -141,3 +139,8 @@ class UserFlashCard(models.Model):
 
     class Meta:
         db_table = 'user_flashcard'
+
+    def __str__(self):
+        return f"User: {self.user_id}, Flashcard: {
+            self.deck_flashcard.flashcard.keyword}, Situation: {
+                self.situation}"
