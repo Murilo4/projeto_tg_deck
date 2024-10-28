@@ -25,7 +25,11 @@ SECRET_KEY = 'django-insecure-7i&suu2ti$p%wv(15z_d@5k0h7jg)$^2kj38$w7)d4sujvdvde
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["http://localhost:3000",
+                 "http://localhost:8000",
+                 "http://localhost:8001",
+                 "https://projeto-tg-deck.onrender.com",
+                 "https://flashvibe.onrender.com"]
 
 
 # Application definition
