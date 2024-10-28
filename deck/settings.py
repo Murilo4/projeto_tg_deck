@@ -56,7 +56,9 @@ ROOT_URLCONF = 'deck.urls'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # Exemplo para React em desenvolvimento
     "http://localhost:8000",
-    "http://localhost:8001"       # Seu domínio em produção
+    "http://localhost:8001",
+    "https://projeto-tg-deck.onrender.com",
+    "https://flashvibe.onrender.com"
 ]
 TEMPLATES = [
     {
