@@ -5,7 +5,10 @@ from .deck_views.deck_management import delete_deck
 from .deck_views.deck_management import get_deck, get_standard_decks
 from .deck_views.deck_management import add_deck_to_user
 from .flashcards_views.create_flashcard import create_flashcard
-from .flashcards_views.flashcard_management import get_all_flashcard
+from .flashcards_views.flashcard_management import get_all_flashcard, update_flashcard
+from .audio_text_views.text import get_translated_word, get_example_sentences
+from .audio_text_views.text import get_correct_word
+from .audio_text_views.audio import get_pronunciations
 
 urlpatterns = [
     path('create-deck/',
@@ -25,5 +28,19 @@ urlpatterns = [
     path("create-flashcard/",
          create_flashcard, name="create_flashcard"),
     path("get-all-flashcard/<int:page_number>/",
-         get_all_flashcard, name="get_all_flashcard")
+         get_all_flashcard, name="get_all_flashcard"),
+    path("update-flashcard/",
+         update_flashcard, name="update_flashcard"),
+    path("get-traslated-word/",
+         get_translated_word, name="get_translated_word"),
+    path("get-example-sentences/",
+         get_example_sentences, name="get_example_sentences"),
+    path("get-pronunciations/",
+         get_pronunciations, name="get_pronunciations"),
+    path('voices/',
+         get_pronunciations, name='available_voices'),
+    path('get-correct-word/',
+         get_correct_word, name="get_correct_word"),
+    #     path("get-correct-phrase/",
+    #          get_correct_phrase, name="get_correct_phrase")
 ]

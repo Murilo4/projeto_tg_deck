@@ -46,16 +46,6 @@ class UserDeck(models.Model):
         db_table = 'user_deck'
 
 
-class DeckFlashCardExample(models.Model):
-    deck_flashcard_id = models.IntegerField(null=False)
-    example_id = models.IntegerField(null=False)
-    created_at = models.DateTimeField(auto_now=True)
-    updated_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'deck_flashcard_example'
-
-
 class Exemple(models.Model):
     text_exemple = models.TextField()
     created_at = models.DateTimeField(auto_now=True)
@@ -139,3 +129,33 @@ class UserFlashCard(models.Model):
 
     class Meta:
         db_table = 'user_flashcard'
+
+
+class Translation(models.Model):
+    id = models.IntegerField(primary_key=True)
+    text_translation = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'translation'
+
+
+class DeckFlashcardTranslation(models.Model):
+    deck_flashcard = models.ForeignKey(DeckFlashCard, on_delete=models.CASCADE)
+    translation = models.ForeignKey(Translation, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'deck_flashcard_translation'
+
+
+class DeckFlashcardExample(models.Model):
+    deck_flashcard = models.ForeignKey(DeckFlashCard, on_delete=models.CASCADE)
+    example = models.ForeignKey(Exemple, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'deck_flashcard_example'

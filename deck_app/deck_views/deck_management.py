@@ -376,7 +376,11 @@ def deck_update(request):
                     deck_id=deck_id, user_id=user_id).delete()
 
                 # Associar o novo deck ao usuário
-                UserDeck.objects.create(user_id=user_id, deck_id=new_deck.id)
+                user_deck_serializer = UserDeck.objects.create(
+                    user_id=user_id, deck_id=new_deck.id)
+
+                if user_deck_serializer.is_valid():
+                    user_deck_serializer.save()
 
                 # Atualizar o novo deck com os dados recebidos
                 serializer = PersonDeckUpdateSerializer(

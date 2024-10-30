@@ -2,7 +2,9 @@ from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from rest_framework import exceptions
 from ..serializers_flashcard import FlashCardGetSerializer
+from ..serializers_flashcard import UserFlashCardSerializer
 from ..serializers_flashcard import UserFlashCardGetSerializer
+from ..serializers_flashcard import DeckFlashcardSerializer
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from ..models import Deck, DeckFlashCard, UserFlashCard
@@ -62,7 +64,8 @@ def get_all_flashcard(request, page_number):
                     situation='Reviewing')
 
             # Filtra os FlashCards que têm UserFlashCards correspondentes
-            flashcards = flashcards.filter(id__in=user_flashcards_qs.values_list('deck_flashcard__flashcard_id', flat=True))
+            flashcards = flashcards.filter(id__in=user_flashcards_qs.values_list(
+                'deck_flashcard__flashcard_id', flat=True))
 
             if order_by == 'newest':
                 flashcards = flashcards.order_by('-created_at')
@@ -106,7 +109,7 @@ def get_all_flashcard(request, page_number):
                     **serialized_user_flashcard,
                     'situation':
                     user_flashcard.situation if user_flashcard else None,
-                    })
+                })
             deck_name = Deck.objects.filter(id=deck_id).first()
             if response_data == []:
                 return JsonResponse({"success": False,
@@ -127,4 +130,102 @@ def get_all_flashcard(request, page_number):
         except exceptions.NotFound:
             return JsonResponse({'success': False,
                                  'message': 'Usuarios não encontrados'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['PUT'])
+def update_flashcard(request):
+    if request.method == "PUT":
+        try:
+            flashcard_id = request.data.get('flashcardId')
+            deck_id = request.data.get('deckId')
+
+            if flashcard_id is None:
+                return JsonResponse({"success": False,
+                                    "message":
+                                     "Não foi possivel localizar o flashcard"},
+                                    status=status.HTTP_404_NOT_FOUND)
+
+            # validate_session()
+
+            token = request.COOKIES.get('jwt_token')
+            if not token:
+                return JsonResponse({
+                    'success': False,
+                    'message':
+                    'Token de autorização ausente. Faça login novamente.'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
+            jwt_data = validate_jwt(token)
+            user_id = jwt_data.get('id')
+
+            deck = Deck.objects.get(id=deck_id)
+
+            if deck.type_deck == "Standard":
+                return JsonResponse({"success": False,
+                                     "message":
+                                     "Você não tem permissão para alterar este flashcard"},
+                                    status=status.HTTP_403_FORBIDDEN)
+            deck_flashcard = DeckFlashCard.objects.get(
+                flashcard_id=flashcard_id, deck_id=deck_id)
+
+            user_flashcards = UserFlashCard.objects.filter(
+                deck_flashcard_id=deck_flashcard.id).count() > 1
+
+            flashcard = FlashCard.objects.get(id=flashcard_id)
+            if user_flashcards:
+                # Criando um novo flashcard com os dados do flashcard original
+                new_flashcard_data = {field.name: getattr(flashcard, field.name)
+                                    for field in FlashCard._meta.fields if field.name != 'id'}
+                new_flashcard = FlashCard.objects.create(**new_flashcard_data)
+
+                # Criando o deck_flashcard com a relação entre o novo flashcard e o deck
+                serializer_deck_flashcard = DeckFlashCard.objects.create(
+                    flashcard_id=new_flashcard.id, deck_id=deck_id
+                )
+
+                # Filtrando os dados do UserFlashCard e convertendo para um dicionário
+                user_flashcard_data = UserFlashCard.objects.filter(
+                    deck_flashcard_id=deck_flashcard.id, user_id=user_id
+                ).values().first()
+
+                # Atualizando com um novo dicionário contendo deck_flashcard_id e user_id
+                new_user_flashcard = {
+                    'deck_flashcard_id': serializer_deck_flashcard.id,
+                    'user_id': user_id
+                }
+                # Criando o UserFlashCard usando os dados como dicionário
+                UserFlashCard.objects.create(**new_user_flashcard)
+
+                # Validando e salvando o novo flashcard criado
+                serializer_flashcard = FlashCardGetSerializer(new_flashcard, data=request.data, partial=True)
+                if serializer_flashcard.is_valid():
+                    serializer_flashcard.save()
+
+                    # Salvando o deck_flashcard criado anteriormente
+                    if serializer_deck_flashcard:
+                        # Deleta os dados antigos após salvar o novo UserFlashCard
+                        user_flashcard_data = UserFlashCard.objects.filter(
+                            deck_flashcard_id=deck_flashcard.id, user_id=user_id
+                        ).delete()
+                        return JsonResponse(
+                            {"success": True, "message": "Atualização realizada com sucesso"},
+                            status=status.HTTP_201_CREATED
+                        )
+                    else:
+                        return JsonResponse({"success": False,
+                                                    "message": "Erro ao atualizar flashcard"},
+                                                    status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    serializer_flashcard = FlashCardGetSerializer(
+                        flashcard, data=request.data, partial=True)
+                    if serializer_flashcard.is_valid():
+                        serializer_flashcard.save()
+                        return JsonResponse({"success": True,
+                                             "message":
+                                            "Atualização realizada com sucesso"},
+                                            status=status.HTTP_201_CREATED)
+        except exceptions.NotFound:
+            return JsonResponse({'success': False,
+                                'message': 'Usuario não localizado'},
                                 status=status.HTTP_400_BAD_REQUEST)

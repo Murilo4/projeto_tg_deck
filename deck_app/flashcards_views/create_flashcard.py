@@ -6,8 +6,11 @@ from rest_framework import exceptions
 from ..serializers_flashcard import CreateFlashCardSerializer
 from ..serializers_flashcard import UserFlashCardSerializer
 from ..serializers_flashcard import DeckFlashcardSerializer
+from ..WordAudioSerializer import TranslationCreateSerializer
 from ..validation.validation_jwt import validate_jwt
 from ..validation.validation_session import validate_session
+from ..models import Translation, DeckFlashcardTranslation
+from ..models import DeckFlashcardExample
 
 
 @csrf_exempt
@@ -31,6 +34,7 @@ def create_flashcard(request):
             user_id = jwt_data.get('id')
             word = request.data.get('keyWord')
             main_phrase = request.data.get('mainPhrase')
+            translated_word = request.data.get('translatedWord', None)
 
             if not word:
                 return JsonResponse({'success': False,
@@ -88,6 +92,31 @@ def create_flashcard(request):
 
                     if user_serializer.is_valid(raise_exception=True):
                         user_serializer.save()
+                        if translated_word is not None:
+                            new_translated_word = TranslationCreateSerializer(
+                                data=translated_word)
+                            if new_translated_word.is_valid(raise_exception=True):
+                                new_translated_word.save()
+                        DeckFlashcardTranslation.objects.create(
+                                deck_flashcard_id=deck_flashcard_id,
+                                translated_id=new_translated_word.id
+                        )
+                        examples_data = request.data.get(
+                                    'examples', [])
+                        if not examples_data:
+                            return JsonResponse({'success': False,
+                                                'message':
+                                                 'Exemplos não encontrados'},
+                                                status=status.HTTP_400_BAD_REQUEST)
+                        for example_text in examples_data:
+                            exemple = Translation.objects.create(
+                                text_example=example_text)
+
+                            DeckFlashcardExample.objects.create(
+                                deck_flashcard_id=deck_flashcard_id,
+                                exemple=exemple.id
+                            )
+
                         return JsonResponse({'success': True,
                                             'message':
                                              'Flashcard criado com sucesso'},
