@@ -2,13 +2,14 @@ from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from rest_framework import exceptions
 from ..serializers_flashcard import FlashCardGetSerializer
-from ..serializers_flashcard import UserFlashCardSerializer
 from ..serializers_flashcard import UserFlashCardGetSerializer
-from ..serializers_flashcard import DeckFlashcardSerializer
+from ..serializers_flashcard import FlashCardGetOneSerializer
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from ..models import Deck, DeckFlashCard, UserFlashCard
-from ..models import FlashCard
+from ..models import FlashCard, DeckFlashcardExample
+from ..models import DeckFlashcardTranslation, DeckFlashcardPronunciation
+from ..models import Example, Translation, Pronunciation
 from django.core.paginator import Paginator
 from django.db.models import Max
 from ..validation.validation_jwt import validate_jwt
@@ -17,9 +18,9 @@ from ..validation.validation_session import validate_session
 
 @csrf_exempt
 @api_view(['GET'])
-def get_all_flashcard(request, page_number):
+def get_all_flashcard(request, page_number, deckId):
     if request.method == 'GET':
-        deck_id = request.data.get('deckId')
+        deck_id = deckId
         try:
             validate_session()
 
@@ -134,11 +135,11 @@ def get_all_flashcard(request, page_number):
 
 
 @api_view(['PUT'])
-def update_flashcard(request):
+def update_flashcard(request, flashcardId,  deckId):
     if request.method == "PUT":
         try:
-            flashcard_id = request.data.get('flashcardId')
-            deck_id = request.data.get('deckId')
+            flashcard_id = flashcardId
+            deck_id = deckId
 
             if flashcard_id is None:
                 return JsonResponse({"success": False,
@@ -198,43 +199,188 @@ def update_flashcard(request):
                 UserFlashCard.objects.create(**new_user_flashcard)
 
                 # Validando e salvando o novo flashcard criado
-                serializer_flashcard = FlashCardGetSerializer(new_flashcard, data=request.data, partial=True)
+                serializer_flashcard = FlashCardGetSerializer(
+                    new_flashcard, data=request.data, partial=True)
+
                 if serializer_flashcard.is_valid():
                     serializer_flashcard.save()
 
-                    # Salvando o deck_flashcard criado anteriormente
                     if serializer_deck_flashcard:
-                        # Deleta os dados antigos após salvar o novo UserFlashCard
                         user_flashcard_data = UserFlashCard.objects.filter(
                             deck_flashcard_id=deck_flashcard.id, user_id=user_id
                         ).delete()
-                        return JsonResponse(
-                            {"success": True, "message": "Atualização realizada com sucesso"},
-                            status=status.HTTP_201_CREATED
-                        )
+
+                        serializer_deck_flashcard.save()
                     else:
                         return JsonResponse({"success": False,
-                                                    "message": "Erro ao atualizar flashcard"},
-                                                    status=status.HTTP_400_BAD_REQUEST)
-                else:
-                    serializer_flashcard = FlashCardGetSerializer(
-                        flashcard, data=request.data, partial=True)
-                    if serializer_flashcard.is_valid():
-                        serializer_flashcard.save()
-                        return JsonResponse({"success": True,
-                                             "message":
-                                            "Atualização realizada com sucesso"},
-                                            status=status.HTTP_201_CREATED)
+                                            "message": "Erro ao atualizar flashcard"},
+                                            status=status.HTTP_400_BAD_REQUEST)
+
+            if 'examples' in request.data:
+                examples_data = request.data['examples']
+                existing_examples = {ex.id: ex for ex in Deck.objects.filter(
+                    deck_flashcard_id=deck_flashcard.id)}
+
+                for example_data in examples_data:
+                    example_id = example_data.get('id')
+                    if example_id:
+                        # Atualizar ou criar exemplo existente
+                        example_instance = Example.objects.update_or_create(
+                            defaults=example_data,  # Atualizar ou criar o exemplo
+                            id=example_id
+                        )[0]
+                        # Adicionar ou atualizar na tabela intermediária
+                        DeckFlashcardExample.objects.update_or_create(
+                            deck_flashcard_id=deck_flashcard.id,
+                            example_id=example_instance.id,
+                        )
+                    else:
+                        # Se o ID não for fornecido, criar um novo exemplo
+                        example_instance = Example.objects.create(**example_data)
+                        DeckFlashcardExample.objects.create(
+                            deck_flashcard_id=deck_flashcard.id,
+                            example_id=example_instance.id)
+
+                # Remover exemplos que não estão mais na requisição
+                existing_example_ids = set(existing_examples.keys())
+                new_example_ids = {ex.get('id') for ex in examples_data if 'id' in ex}
+                ids_to_delete_examples = existing_example_ids - new_example_ids
+                DeckFlashcardExample.objects.filter(
+                    example_id__in=ids_to_delete_examples,
+                    deck_flashcard_id=deck_flashcard.id).delete()
+
+            # Atualizar pronúncias
+            if 'pronunciations' in request.data:
+                pronunciations_data = request.data['pronunciations']
+                existing_pronunciations = {pr.id: pr for pr in DeckFlashcardPronunciation.objects.filter(deck_flashcard_id=deck_flashcard.id)}
+
+                for pronunciation_data in pronunciations_data:
+                    pronunciation_id = pronunciation_data.get('id')
+                    if pronunciation_id:
+                        pronunciation_instance = Pronunciation.objects.update_or_create(
+                            defaults=pronunciation_data,
+                            id=pronunciation_id
+                        )[0]
+                        DeckFlashcardPronunciation.objects.update_or_create(
+                            deck_flashcard_id=deck_flashcard.id,
+                            pronunciation_id=pronunciation_instance.id,
+                        )
+                    else:
+                        pronunciation_instance = Pronunciation.objects.create(**pronunciation_data)
+                        DeckFlashcardPronunciation.objects.create(
+                            deck_flashcard_id=deck_flashcard.id,
+                            pronunciation_id=pronunciation_instance.id)
+
+                existing_pronunciation_ids = set(existing_pronunciations.keys())
+                new_pronunciation_ids = {pr.get('id') for pr in pronunciations_data if 'id' in pr}
+                ids_to_delete_pronunciations = existing_pronunciation_ids - new_pronunciation_ids
+                DeckFlashcardPronunciation.objects.filter(pronunciation_id__in=ids_to_delete_pronunciations, deck_flashcard_id=deck_flashcard.id).delete()
+
+            # Atualizar traduções
+            if 'translations' in request.data:
+                translations_data = request.data['translations']
+                existing_translations = {tr.id: tr for tr in DeckFlashcardTranslation.objects.filter(deck_flashcard_id=deck_flashcard.id)}
+
+                for translation_data in translations_data:
+                    translation_id = translation_data.get('id')
+                    if translation_id:
+                        translation_instance = Translation.objects.update_or_create(
+                            defaults=translation_data,
+                            id=translation_id
+                        )[0]
+                        DeckFlashcardTranslation.objects.update_or_create(
+                            deck_flashcard_id=deck_flashcard.id,
+                            translation_id=translation_instance.id,
+                        )
+                    else:
+                        translation_instance = Translation.objects.create(**translation_data)
+                        DeckFlashcardTranslation.objects.create(
+                            deck_flashcard_id=deck_flashcard.id, 
+                            translation_id=translation_instance.id)
+
+                existing_translation_ids = set(existing_translations.keys())
+                new_translation_ids = {tr.get('id') for tr in translations_data if 'id' in tr}
+                ids_to_delete_translations = existing_translation_ids - new_translation_ids
+                DeckFlashcardTranslation.objects.filter(
+                    translation_id__in=ids_to_delete_translations,
+                    deck_flashcard_id=deck_flashcard.id).delete()
+
+                return JsonResponse({"success": True,
+                                    "message":
+                                    "Atualização realizada com sucesso"},
+                                    status=status.HTTP_201_CREATED)
         except exceptions.NotFound:
             return JsonResponse({'success': False,
                                 'message': 'Usuario não localizado'},
                                 status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['GET'])
+def get_one_flashcard(request, flashcard_id):
+    if request.method == "GET":
+        try:
+            # Obtendo o flashcard específico
+            flashcard = FlashCard.objects.get(id=flashcard_id)
+
+            # Serializando os dados do flashcard
+            flashcard_serializer = FlashCardGetOneSerializer(flashcard)
+
+            # Buscando dados relacionados (exemplos, pronúncias, traduções)
+            deck_flashcard = DeckFlashCard.objects.get(flashcard=flashcard)
+
+            examples = DeckFlashcardExample.objects.filter(
+                deck_flashcard=deck_flashcard.id)
+            example_data = [{'id': ex.example.id, 'text': ex.example.text} for ex in examples] if examples.exists() else []
+
+            pronunciations = DeckFlashcardPronunciation.objects.filter(
+                deck_flashcard=deck_flashcard).select_related('pronunciation')
+            pronunciation_data = [{'id': pr.pronunciation.id, 'keyword': pr.pronunciation.keyword, 
+                                   'audio_url': pr.pronunciation.audio_url} for pr in pronunciations] if pronunciations.exists() else []
+
+            translations = DeckFlashcardTranslation.objects.filter(
+                deck_flashcard=deck_flashcard).select_related('translation')
+            translations_data = [{'id': tr.translation.id,
+                                  'text': tr.translation.text}
+                                for tr in translations] if translations.exists() else []
+
+            response_data = {
+                'flashcard': flashcard_serializer.data,
+                'examples': example_data,
+                'pronunciations': pronunciation_data,
+                'translations': translations_data,
+            }
+
+            return JsonResponse({
+                'success': True,
+                'data': response_data
+            }, status=status.HTTP_200_OK)
+
+        except FlashCard.DoesNotExist:
+            return JsonResponse({"success": False, "message": "FlashCard não encontrado"}, status=status.HTTP_404_NOT_FOUND)
+        except DeckFlashCard.DoesNotExist:
+            return JsonResponse({"success": False, "message": "DeckFlashCard não encontrado"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Erro: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
 @api_view(['DELETE'])
-def delete_flashcard(request):
+def delete_flashcard(request, flashcardId):
     if request.method == 'DELETE':
         try:
-            ...
+            flashcard_id = request.data.get('flascardId')
+
+            if not flashcard_id:
+                return JsonResponse({"success"})
+
+            token = request.COOKIES.get('jwt_token')
+            if not token:
+                return JsonResponse({
+                    'success': False,
+                    'message':
+                    'Token de autorização ausente. Faça login novamente.'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
+            jwt_data = validate_jwt(token)
+            user_id = jwt_data.get('id')
         except:
             ...

@@ -46,13 +46,14 @@ class UserDeck(models.Model):
         db_table = 'user_deck'
 
 
-class Exemple(models.Model):
-    text_exemple = models.TextField()
+class Example(models.Model):
+    id = models.IntegerField(primary_key=True)
+    text_example = models.TextField()
     created_at = models.DateTimeField(auto_now=True)
     updated_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'exemple'
+        db_table = 'example'
 
 
 class FlashCard(models.Model):
@@ -89,6 +90,7 @@ class FlashCardPriority(models.Model):
 
 
 class Pronunciation(models.Model):
+    id = models.IntegerField(primary_key=True)
     keyword = models.CharField(max_length=255, default=None)
     audio_url = models.CharField(max_length=255, default=None)
     created_at = models.DateTimeField(auto_now=True)
@@ -142,6 +144,7 @@ class Translation(models.Model):
 
 
 class DeckFlashcardTranslation(models.Model):
+    id = models.IntegerField(primary_key=True)
     deck_flashcard = models.ForeignKey(DeckFlashCard, on_delete=models.CASCADE)
     translation = models.ForeignKey(Translation, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now=True)
@@ -153,9 +156,19 @@ class DeckFlashcardTranslation(models.Model):
 
 class DeckFlashcardExample(models.Model):
     deck_flashcard = models.ForeignKey(DeckFlashCard, on_delete=models.CASCADE)
-    example = models.ForeignKey(Exemple, on_delete=models.CASCADE)
+    example = models.ForeignKey(Example, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now=True)
     updated_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'deck_flashcard_example'
+
+
+class DeckFlashcardPronunciation(models.Model):
+    deck_flashcard = models.ForeignKey(DeckFlashCard, on_delete=models.CASCADE)
+    pronunciation = models.ForeignKey(Pronunciation, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'deck_flashcard_pronunciation'

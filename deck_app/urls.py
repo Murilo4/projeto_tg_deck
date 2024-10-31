@@ -6,6 +6,7 @@ from .deck_views.deck_management import get_deck, get_standard_decks
 from .deck_views.deck_management import add_deck_to_user
 from .flashcards_views.create_flashcard import create_flashcard
 from .flashcards_views.flashcard_management import get_all_flashcard, update_flashcard
+from .flashcards_views.flashcard_management import get_one_flashcard
 from .audio_text_views.text import get_translated_word, get_example_sentences
 from .audio_text_views.text import get_correct_word
 from .audio_text_views.audio import get_pronunciations
@@ -15,21 +16,21 @@ urlpatterns = [
          create_deck, name="create_deck"),
     path('get-all-decks/<int:page_number>/',
          get_all_decks, name="get_decks"),
-    path('update-deck/',
+    path('update-deck/<int:deckId>/',
          deck_update, name="deck_update"),
-    path('delete-deck/',
+    path('delete-deck/<int:deckId>/',
          delete_deck, name="delete_deck"),
-    path('get-deck/',
+    path('get-deck/<int:deckId>/',
          get_deck, name='get_deck'),
     path('get-standard-decks/<int:page_number>/',
          get_standard_decks, name='get_standard_decks'),
-    path('add-deck-to-user/',
+    path('add-deck-to-user/<int:deckId>/',
          add_deck_to_user, name='add_standard_deck_to_user'),
-    path("create-flashcard/",
+    path("create-flashcard/<int:deckId>/",
          create_flashcard, name="create_flashcard"),
-    path("get-all-flashcard/<int:page_number>/",
+    path("get-all-flashcard/<int:page_number>/<int:deckId>/",
          get_all_flashcard, name="get_all_flashcard"),
-    path("update-flashcard/",
+    path("update-flashcard/<int:flashcardId>/<int:deckId>/",
          update_flashcard, name="update_flashcard"),
     path("get-traslated-word/",
          get_translated_word, name="get_translated_word"),
@@ -43,4 +44,6 @@ urlpatterns = [
          get_correct_word, name="get_correct_word"),
     #     path("get-correct-phrase/",
     #          get_correct_phrase, name="get_correct_phrase")
+    path("get-one-flashcard/<int:flashcard_id>/",
+         get_one_flashcard, name="get_one_flashcard")
 ]

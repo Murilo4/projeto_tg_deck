@@ -282,9 +282,9 @@ def get_standard_decks(request, page_number):
 
 @csrf_exempt
 @api_view(['GET'])
-def get_deck(request):
+def get_deck(request, deckId):
     if request.method == 'GET':
-        deck_id = request.data.get('deckId')
+        deck_id = deckId
         try:
             validate_session()
 
@@ -320,10 +320,10 @@ def get_deck(request):
 
 @csrf_exempt
 @api_view(['PUT'])
-def deck_update(request):
+def deck_update(request, deckId):
     if request.method == 'PUT':
         try:
-            deck_id = request.COOKIES.get('deckId')
+            deck_id = deckId
             validate_session()
 
             token = request.headers.get('jwt_token')
@@ -405,10 +405,10 @@ def deck_update(request):
 
 @csrf_exempt
 @api_view(['DELETE'])
-def delete_deck(request):
+def delete_deck(request, deckId):
     if request.method == 'DELETE':
         try:
-            deck_id = request.data.get('deckId')
+            deck_id = deckId
             validate_session()
 
             token = request.COOKIES.get('jwt_token')
@@ -468,8 +468,8 @@ def delete_deck(request):
 
 
 @api_view(['POST'])
-def add_deck_to_user(request):
-    deck_id = request.data.get('deckId')
+def add_deck_to_user(request, deckId):
+    deck_id = deckId
     try:
         token = request.COOKIES.get('jwt_token')
         if not token:

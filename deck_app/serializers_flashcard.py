@@ -1,20 +1,17 @@
 from rest_framework import serializers
 from .models import FlashCard, DeckFlashCard
-from .models import UserFlashCard
+from .models import UserFlashCard, DeckFlashcardExample
+from .models import DeckFlashcardPronunciation, DeckFlashcardTranslation
 from datetime import datetime
+from .WordAudioSerializer import ExampleSerializer, PronunciationSerializer
+from .WordAudioSerializer import TranslationSerializer
 
 
 class CreateFlashCardSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = FlashCard
-        fields = (
-            'id', 'keyword', 'main_phrase'
-        )
-
-    def create(self, validated_data):
-        flashcard = FlashCard(**validated_data)
-        flashcard.save()
-        return flashcard
+        fields = ['id', 'main_phrase', 'keyword']
 
 
 class FlashCardGetSerializer(serializers.ModelSerializer):
@@ -52,6 +49,13 @@ class DeckFlashcardSerializer(serializers.ModelSerializer):
         deck_flashcard = DeckFlashCard(**validated_data)
         deck_flashcard.save()
         return deck_flashcard
+
+
+class FlashCardGetOneSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = FlashCard
+        fields = ['id', 'keyword', 'main_phrase']
 
 
 class UserFlashCardSerializer(serializers.ModelSerializer):
