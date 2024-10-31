@@ -57,7 +57,7 @@ def create_flashcard(request):
                                     'message': 'Deck não encontrado'},
                                     status=status.HTTP_400_BAD_REQUEST)
 
-            if word.lower() not in main_phrase:
+            if word.lower() not in main_phrase.lower():
                 return JsonResponse({'success': False,
                                     'message':
                                      'Palavra chave não encontrada na frase'},

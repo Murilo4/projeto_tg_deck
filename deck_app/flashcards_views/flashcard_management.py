@@ -39,7 +39,7 @@ def get_all_flashcard(request, page_number):
                                     'message': 'userId é necessário'},
                                     status=status.HTTP_400_BAD_REQUEST)
 
-            order_by = request.GET.get('order_by', None)
+            order_by = request.GET.get('orderBy', None)
             new = request.GET.get('New', None)
             learning = request.GET.get('Learning', None)
             reviewing = request.GET.get('Reviewing', None)
@@ -71,9 +71,9 @@ def get_all_flashcard(request, page_number):
                 flashcards = flashcards.order_by('-created_at')
             elif order_by == 'oldest':
                 flashcards = flashcards.order_by('created_at')
-            elif order_by == 'recently-modified':
+            elif order_by == 'recentlyModified':
                 flashcards = flashcards.order_by('-updated_at')
-            elif order_by == 'last-time':
+            elif order_by == 'lastTime':
                 user_flashcards = UserFlashCard.objects.filter(
                     user_id=user_id).values(
                         'deck_flashcard__deck_id').annotate(
@@ -229,3 +229,12 @@ def update_flashcard(request):
             return JsonResponse({'success': False,
                                 'message': 'Usuario não localizado'},
                                 status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['DELETE'])
+def delete_flashcard(request):
+    if request.method == 'DELETE':
+        try:
+            ...
+        except:
+            ...
