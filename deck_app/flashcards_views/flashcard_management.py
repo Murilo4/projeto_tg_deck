@@ -316,21 +316,25 @@ def update_flashcard(request, flashcardId,  deckId):
 
 
 @api_view(['GET'])
-def get_one_flashcard(request, flashcard_id):
+def get_one_flashcard(request, flashcardId, deckId):
     if request.method == "GET":
         try:
             # Obtendo o flashcard específico
-            flashcard = FlashCard.objects.get(id=flashcard_id)
+            flashcard = FlashCard.objects.get(id=flashcardId)
 
             # Serializando os dados do flashcard
             flashcard_serializer = FlashCardGetOneSerializer(flashcard)
 
             # Buscando dados relacionados (exemplos, pronúncias, traduções)
-            deck_flashcard = DeckFlashCard.objects.get(flashcard=flashcard)
-
+            deck_flashcard = DeckFlashCard.objects.get(flashcard=flashcard,
+                                                       deck=deckId)
+            # Usando prefetch_related
             examples = DeckFlashcardExample.objects.filter(
-                deck_flashcard=deck_flashcard.id)
-            example_data = [{'id': ex.example.id, 'text': ex.example.text} for ex in examples] if examples.exists() else []
+                deck_flashcard=deck_flashcard).select_related('example')
+            for ex in examples:
+                print(ex.example.id, ex.example.text_example)
+            example_data = [{'id': ex.example.id, 'text_example': ex.example.text_example} for ex in examples] if examples.exists() else []
+            
 
             pronunciations = DeckFlashcardPronunciation.objects.filter(
                 deck_flashcard=deck_flashcard).select_related('pronunciation')

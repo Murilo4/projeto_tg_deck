@@ -44,6 +44,6 @@ urlpatterns = [
          get_correct_word, name="get_correct_word"),
     #     path("get-correct-phrase/",
     #          get_correct_phrase, name="get_correct_phrase")
-    path("get-one-flashcard/<int:flashcard_id>/",
+    path("get-one-flashcard/<int:flashcardId>/<int:deckId>/",
          get_one_flashcard, name="get_one_flashcard")
 ]

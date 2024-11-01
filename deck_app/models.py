@@ -41,18 +41,19 @@ class UserDeck(models.Model):
             raise ValidationError(f'Usuário com ID {self.user_id} não existe.')
 
     class Meta:
-        managed = True
+        managed = False
         unique_together = (('user_id', 'deck_id'),)
         db_table = 'user_deck'
 
 
 class Example(models.Model):
     id = models.IntegerField(primary_key=True)
-    text_example = models.TextField()
+    text_example = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now=True)
     updated_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        managed = False
         db_table = 'example'
 
 
@@ -144,7 +145,6 @@ class Translation(models.Model):
 
 
 class DeckFlashcardTranslation(models.Model):
-    id = models.IntegerField(primary_key=True)
     deck_flashcard = models.ForeignKey(DeckFlashCard, on_delete=models.CASCADE)
     translation = models.ForeignKey(Translation, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now=True)

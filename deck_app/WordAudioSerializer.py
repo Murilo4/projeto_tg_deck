@@ -5,12 +5,19 @@ from .models import Translation, Example, Pronunciation
 class TranslationCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Translation
-        fields = "id", "translation"
+        fields = ["text_translation"]
 
     def create(self, validated_data):
-        translation = Translation(**validated_data)
-        translation.save()
-        return translation
+        return Translation.objects.create(**validated_data)
+
+
+class ExampleCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Example
+        fields = ['text_example']  # Certifique-se de que este campo está correto
+
+    def create(self, validated_data):
+        return Example.objects.create(**validated_data)
 
 
 class ExampleSerializer(serializers.ModelSerializer):
@@ -35,3 +42,5 @@ class PronunciationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pronunciation
         fields = ['keyword', 'audioUrl']
+
+

@@ -88,3 +88,26 @@ class UserFlashCardGetSerializer(serializers.ModelSerializer):
         else:
             now = datetime.now(obj.last_time.tzinfo)
         return now
+    
+
+class DeckFlashcardExampleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeckFlashcardExample
+        fields = 'deck_flashcard', 'example'
+
+    def create(self, validated_data):
+        Deck_flashcard_example = DeckFlashcardExample(**validated_data)
+        Deck_flashcard_example.save()
+        return Deck_flashcard_example
+    
+
+class DeckFlashcardTranslationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeckFlashcardTranslation
+        fields = 'deck_flashcard', 'translation'
+
+    def create(self, validated_data):
+        Deck_flashcard_translation = DeckFlashcardTranslation(
+            **validated_data)
+        Deck_flashcard_translation.save()
+        return Deck_flashcard_translation
