@@ -9,7 +9,8 @@ from django.views.decorators.csrf import csrf_exempt
 from ..models import Deck, DeckFlashCard, UserFlashCard
 from ..models import FlashCard, DeckFlashcardExample
 from ..models import DeckFlashcardTranslation, DeckFlashcardPronunciation
-from ..models import Example, Translation, Pronunciation
+from ..models import Example, Translation, Pronunciation, FlashcardPhoto
+from ..models import FlashCardPriority
 from django.core.paginator import Paginator
 from django.db.models import Max
 from ..validation.validation_jwt import validate_jwt
@@ -143,7 +144,7 @@ def update_flashcard(request, flashcardId, deckId):
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'message': 
+                    'message':
                     'Token de autorização ausente. Faça login novamente.'
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -154,7 +155,7 @@ def update_flashcard(request, flashcardId, deckId):
             if deck.type_deck == "Standard":
                 return JsonResponse({
                     "success": False,
-                    "message": 
+                    "message":
                     "Você não tem permissão para alterar este flashcard"
                 }, status=status.HTTP_403_FORBIDDEN)
 
@@ -173,10 +174,14 @@ def update_flashcard(request, flashcardId, deckId):
                 existing_pr, new_prs, exist_pr = process_pr(
                     request.data.get('flashcard', {}).get(
                         'pronunciations', []), deck_flashcard)
-                
+
                 existing_tr, new_trs, tr_exist_ids = process_tr(
                     request.data.get('flashcard', {}).get(
                         'translations', []), deck_flashcard)
+
+                img_ids_to_keep, img_ids_to_add = process_img(
+                    request.data.get('flashcard', {}).get(
+                        'images', []), deck_flashcard)
 
                 if new_examples:
                     Example.objects.bulk_create(new_examples)
@@ -191,7 +196,6 @@ def update_flashcard(request, flashcardId, deckId):
 
                 if new_prs:
                     Pronunciation.objects.bulk_create(new_prs)
-
                     for new_pr in new_prs:
                         # Aqui estamos recuperando do banco de dados os IDs dos exemplos recém-criados
                         existing_prs = Pronunciation.objects.filter(
@@ -203,14 +207,21 @@ def update_flashcard(request, flashcardId, deckId):
 
                 if new_trs:
                     Translation.objects.bulk_create(new_trs)
-
                     for new_tr in new_trs:
                         existing_trs = Translation.objects.filter(
                             text_translation=new_tr.text_translation
-                        )
+                        ).first()
                     if existing_trs:
                         existing_tr.add(existing_trs.id)
                         tr_exist_ids.add(existing_trs.id)
+
+                if img_ids_to_add:
+                    FlashcardPhoto.objects.bulk_create(img_ids_to_add)
+                    for image in img_ids_to_add:
+                        existing_img = FlashcardPhoto.objects.filter(
+                            image=image).first()
+                        if existing_img:
+                            img_ids_to_keep.add(existing_img.id)
 
                 if existing_examples:
                     link_examples_to_deck_flashcard(
@@ -219,14 +230,21 @@ def update_flashcard(request, flashcardId, deckId):
                 if existing_pr:
                     link_pr_to_deck_flashcard(
                         existing_pr, deck_flashcard)
-                    
+
                 if existing_tr:
+                    print(existing_tr)
                     link_tr_to_deck_flashcard(
                         existing_tr, deck_flashcard)
+
+                if img_ids_to_add:
+                    link_tr_to_deck_flashcard(
+                        img_ids_to_add, deck_flashcard
+                    )
 
                 remove_old_examples(deck_flashcard, exist_example)
                 remove_old_pr(deck_flashcard, exist_pr)
                 remove_old_tr(deck_flashcard, tr_exist_ids)
+                remove_old_img(deck_flashcard,  img_ids_to_keep)
 
             return JsonResponse({
                 "success": True,
@@ -273,12 +291,21 @@ def remove_old_pr(deck_flashcard, exist_pr):
 def remove_old_tr(deck_flashcard, exist_tr_ids):
     current_tr_ids = DeckFlashcardTranslation.objects.filter(
         deck_flashcard=deck_flashcard).values_list(
-            'translation_id', flat=True
-        )
+            'translation_id', flat=True)
     tr_to_remove = set(current_tr_ids) - exist_tr_ids
     DeckFlashcardTranslation.objects.filter(
         translation_id__in=tr_to_remove,
         deck_flashcard=deck_flashcard).delete()
+
+
+def remove_old_img(deck_flashcard,  exist_img_ids):
+    current_img_ids = FlashcardPhoto.objects.filter(
+        deck_flashcard=deck_flashcard).values_list(
+            'deck_flascard_id', flat=True
+    )
+    img_to_remove = set(current_img_ids) - exist_img_ids
+    FlashcardPhoto.objects.filter(
+        deck_flascard_id__in=img_to_remove).delete()
 
 
 def update_flashcard_data(flashcard, data):
@@ -343,14 +370,31 @@ def process_ex(examples_data, deck_flashcard):
     return existing_example_ids, new_examples, exist_ids
 
 
+def process_img(existing_images):
+    img_ids_to_keep = set()
+    img_ids_to_add = []
+
+    for images_data in existing_images:
+        img_id = images_data.get('id')
+        img_url = images_data.get('url')
+
+        if img_id:
+            img = FlashcardPhoto.objects.filter(id=img_id).first()
+            if img:
+                img_ids_to_keep.add(img.id)
+        else:
+            img_ids_to_add.append(FlashcardPhoto(file_url=img_url))
+    return img_ids_to_keep, img_ids_to_add
+
+
 def process_tr(tr_data, deck_flashcard):
     existing_tr_ids = set()
     tr_exist_ids = set()
     new_trs = []
 
-    for example_data in tr_data:
-        tr_id = example_data.get('id')
-        tr_text = example_data.get('textTranslation')
+    for translation_data in tr_data:
+        tr_id = translation_data.get('id')
+        tr_text = translation_data.get('textTranslation')
 
         if tr_id:
             existing_tr = Translation.objects.filter(id=tr_id).first()
@@ -380,7 +424,6 @@ def process_tr(tr_data, deck_flashcard):
 
 
 def process_pr(pr_data, deck_flashcard):
-    """Process and categorize examples from request data."""
     existing_pr_ids = set()
     pr_exist_ids = set()
     new_prs = []
@@ -430,8 +473,8 @@ def link_examples_to_deck_flashcard(existing_example_ids, deck_flashcard):
         )
 
 
-def link_tr_to_deck_flashcard(existing_tr_ids, deck_flashcard):
-    for tr_id in existing_tr_ids:
+def link_tr_to_deck_flashcard(existing_tr, deck_flashcard):
+    for tr_id in existing_tr:
         tr = Translation.objects.get(id=tr_id)
         DeckFlashcardTranslation.objects.create(
             deck_flashcard=deck_flashcard,
@@ -452,17 +495,13 @@ def link_pr_to_deck_flashcard(existing_pr_ids, deck_flashcard):
 def get_one_flashcard(request, flashcardId, deckId):
     if request.method == "GET":
         try:
-            # Obtendo o flashcard específico
             flashcard = FlashCard.objects.get(id=flashcardId)
 
-            # Serializando os dados do flashcard
             flashcard_serializer = FlashCardGetOneSerializer(flashcard)
 
-            # Buscando dados relacionados (exemplos, pronúncias, traduções)
             deck_flashcard = DeckFlashCard.objects.get(
                 flashcard=flashcard, deck=deckId)
 
-            # Usando prefetch_related
             examples = DeckFlashcardExample.objects.filter(
                 deck_flashcard=deck_flashcard).select_related('example')
             example_data = [{'id': ex.example.id,
@@ -507,13 +546,16 @@ def get_one_flashcard(request, flashcardId, deckId):
 
 
 @api_view(['DELETE'])
-def delete_flashcard(request, flashcardId):
+def delete_flashcard(request, flashcardId, deckId):
     if request.method == 'DELETE':
         try:
-            flashcard_id = request.data.get('flascardId')
+            if not flashcardId:
+                return JsonResponse({"success": False,
+                                     "message":
+                                    "É necessario informar o flashcard id"},
+                                    status=status.HTTP_400_BAD_REQUEST)
 
-            if not flashcard_id:
-                return JsonResponse({"success"})
+            validate_session()
 
             token = request.COOKIES.get('jwt_token')
             if not token:
@@ -525,5 +567,123 @@ def delete_flashcard(request, flashcardId):
 
             jwt_data = validate_jwt(token)
             user_id = jwt_data.get('id')
-        except:
-            ...
+
+            if user_id is None:
+                return JsonResponse({"success": False,
+                                     "message":
+                                    "Usuario não autenticado"},
+                                    status=status.HTTP_403_FORBIDDEN)
+            try:
+                flashcard = FlashCard.objects.get(id=flashcardId)
+                deck_flashcard = DeckFlashCard.objects.get(
+                    deck_id=deckId, flashcard_id=flashcardId)
+
+                if not flashcard or deck_flashcard:
+                    return JsonResponse({"success": False,
+                                         "message":
+                                         "Nenhum flashcard localizado"},
+                                        status=status.HTTP_403_FORBIDDEN)
+
+                examples = delete_examples(deck_flashcard)
+                translation = delete_translation(deck_flashcard)
+                pronunciation = delete_pronunciation(deck_flashcard)
+                images = delete_images(deck_flashcard)
+
+                user_flashcard = delete_user_flashcard(deck_flashcard, user_id)
+
+                return JsonResponse({"success": True,
+                                     "message":
+                                     "Flashcard deletado com sucesso"},
+                                    status=status.HTTP_200_OK)
+
+            except exceptions.NotFound:
+                return JsonResponse({"success": False,
+                                     "message":  "Flashcard não encontrado"},
+                                    status=status.HTTP_404_NOT_FOUND)
+
+        except exceptions.ValidationError:
+            return JsonResponse({"success": False,
+                                 "message": "Flashcard não encontrado"},
+                                status=status.HTTP_404_NOT_FOUND)
+
+
+def delete_examples(deck_flashcard):
+    try:
+        examples = Example.objects.filter(
+            deck_flashcard_id=deck_flashcard.id)
+        for example in examples:
+            more_one_example = Example.objects.filter(
+                text_example=example.text_example).count > 2
+            if more_one_example:
+                delete_deck_flashcard_example = DeckFlashcardExample.objects.get(
+                    text_example=example.text)
+                delete_deck_flashcard_example.delete()
+            else:
+                delete_deck_flashcard_example = DeckFlashcardExample.objects.get(
+                    text_example=example.text)
+                delete_deck_flashcard_example.delete()
+                example.delete()
+    except exceptions.NotFound:
+        return False
+    deleted_examples = True
+    return deleted_examples
+
+
+def delete_translation(deck_flashcard):
+    try:
+        translations = Translation.objects.filter(
+            deck_flashcard_id=deck_flashcard.id)
+        for translation in translations:
+            more_one_translation = Translation.objects.filter(
+                text_example=translation.text_translation).count > 2
+            if more_one_translation:
+                delete_deck_flashcard_tr = DeckFlashcardExample.objects.get(
+                    text_example=translation.text_translation)
+                delete_deck_flashcard_tr.delete()
+            else:
+                delete_deck_flashcard_example = DeckFlashcardExample.objects.get(
+                    text_example=translation.text_translation)
+                delete_deck_flashcard_example.delete()
+                translation.delete()
+        deleted_translation = True
+        return deleted_translation
+    except exceptions.NotFound:
+        return False
+
+
+def delete_images(deck_flashcard):
+    try:
+        images = FlashcardPhoto.objects.filter(
+            deck_flashcard_id=deck_flashcard.id,
+        )
+        for image in images:
+            image.delete()
+        deleted_images = True
+        return deleted_images
+    except exceptions.NotFound:
+        return False
+
+
+def delete_user_flashcard(deck_flashcard, user_id):
+    try:
+        user_flashcard = UserFlashCard.objects.filter(
+            deck_flashcard_id=deck_flashcard.id,
+            user_id=user_id)
+        if user_flashcard:
+            user_flashcard.delete()
+            deleted_user_flashcard = True
+        else:
+            deleted_user_flashcard = False
+
+        user_priority = FlashCardPriority.objects.filter(
+            user_flashcard_id=user_flashcard.id,
+            user_id=user_id)
+        if user_priority:
+            user_priority.delete()
+            deleted_user_priority = True
+        else:
+            deleted_user_priority = False
+
+        return deleted_user_flashcard, deleted_user_priority
+    except exceptions.NotFound:
+        return False

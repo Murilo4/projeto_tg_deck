@@ -7,7 +7,7 @@ from ..serializers_flashcard import DeckFlashcardExampleSerializer
 from ..serializers_flashcard import DeckFlashcardTranslationSerializer
 from ..WordAudioSerializer import ExampleCreateSerializer
 from ..WordAudioSerializer import TranslationCreateSerializer
-from ..models import UserFlashCard
+from ..models import UserFlashCard, FlashcardPhoto
 from ..models import DeckFlashCard
 from ..models import Pronunciation, DeckFlashcardPronunciation
 from ..validation.validation_jwt import validate_jwt
@@ -130,7 +130,8 @@ def create_flashcard(request, deckId):
                     keyword = pronunciation_data.get('keyword')
                     audio_url = pronunciation_data.get('audioUrl')
                     if not keyword or not audio_url:
-                        return JsonResponse({"success": False, "message": "Áudio inválido"})
+                        return JsonResponse({"success": False, 
+                                             "message": "Áudio inválido"})
 
                     pronunciation = Pronunciation.objects.filter(keyword=keyword, audio_url=audio_url).first()
                     if pronunciation:
@@ -145,14 +146,57 @@ def create_flashcard(request, deckId):
                         pronunciation=pronunciation,
                         deck_flashcard=deck_flashcard
                     )
-                    print("Relação de pronúncia salva com sucesso.")
 
-                return JsonResponse({"success": True, "message": "Flashcard criado com sucesso"},
+                img = request.data.get('images', [])
+                for image_data in img:
+                    image_url = image_data.get('imageUrl')
+                    file_description = image_data.get('description')
+
+                    if not image_url or not file_description:
+                        return JsonResponse({"success": False,
+                                             "message": "Áudio inválido"})
+
+                    image = FlashcardPhoto.objects.filter(deck_flashcard_id=deck_flashcard,
+                                                          image_url=image_url,
+                                                          file_description=file_description)
+                    if not image:
+                        image = FlashcardPhoto.objects.create(deck_flashcard_id=deck_flashcard,
+                                                              image_url=image_url,
+                                                              file_description=file_description)
+                        image.save()
+
+                return JsonResponse({"success": True,
+                                     "message":
+                                    "Flashcard criado com sucesso"},
                                     status=status.HTTP_201_CREATED)
 
-            return JsonResponse({"success": False, "message": flashcard_serializer.errors},
+            return JsonResponse({"success": False,
+                                 "message": flashcard_serializer.errors},
                                 status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Erro: {str(e)}'},
+            return JsonResponse({'success': False,
+                                 'message': f'Erro: {str(e)}'},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+# from firebase_config import bucket
+# from werkzeug.utils import secure_filename
+
+# @api_view(['POST'])
+# def upload_audio(request):
+#     if 'file' not in request.FILES:
+#         return Response({'success': False, 'message': 'No file uploaded.'}, status=status.HTTP_400_BAD_REQUEST)
+
+#     audio_file = request.FILES['file']
+#     filename = secure_filename(audio_file.name)
+
+#     # Fazer o upload para o Firebase Storage
+#     blob = bucket.blob(f'temp_audios/{filename}')
+#     blob.upload_from_file(audio_file, content_type=audio_file.content_type)
+
+#     # Obter a URL do arquivo
+#     audio_url = blob.public_url
+
+#     return Response({'success': True, 'url': audio_url}, status=status.HTTP_201_CREATED)
