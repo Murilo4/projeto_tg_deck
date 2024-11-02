@@ -20,6 +20,7 @@ class Deck(models.Model):
     updated_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        managed = False
         db_table = 'deck'
 
 
@@ -53,7 +54,6 @@ class Example(models.Model):
     updated_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = False
         db_table = 'example'
 
 
@@ -87,13 +87,14 @@ class FlashCardPriority(models.Model):
     updated_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        managed = False
         db_table = 'flashcard_priority'
 
 
 class Pronunciation(models.Model):
     id = models.IntegerField(primary_key=True)
-    keyword = models.CharField(max_length=255, default=None)
-    audio_url = models.CharField(max_length=255, default=None)
+    keyword = models.CharField(max_length=255)
+    audio_url = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now=True)
     updated_at = models.DateTimeField(auto_now_add=True)
 
