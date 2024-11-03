@@ -11,9 +11,8 @@ from ..models import UserFlashCard, FlashcardPhoto
 from ..models import DeckFlashCard
 from ..models import Pronunciation, DeckFlashcardPronunciation
 from ..validation.validation_jwt import validate_jwt
-# from ..validation.validation_session import validate_session
+from ..validation.validation_session import validate_session
 from ..models import Example, Translation
-from ..models import DeckFlashcardExample
 
 
 @csrf_exempt
@@ -25,11 +24,13 @@ def create_flashcard(request, deckId):
             keyword = request.data.get('keyword')
             main_phrase = request.data.get('mainPhrase')
 
+            validate_session()
             token = request.COOKIES.get('jwt_token')
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Token de autorização ausente. Faça login novamente.'
+                    'message':
+                    'Token de autorização ausente. Faça login novamente.'
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             jwt_data = validate_jwt(token)
@@ -40,7 +41,8 @@ def create_flashcard(request, deckId):
                 "keyword": keyword,
                 "main_phrase": main_phrase
             }
-            flashcard_serializer = CreateFlashCardSerializer(data=flashcard_data)
+            flashcard_serializer = CreateFlashCardSerializer(
+                data=flashcard_data)
             if flashcard_serializer.is_valid():
                 flashcard = flashcard_serializer.save()
 
@@ -62,65 +64,64 @@ def create_flashcard(request, deckId):
                     text_example = example_data.get('textExample')
 
                     if not text_example:
-                        return JsonResponse({"success": False, "message": "Exemplo inválido"})
+                        return JsonResponse({"success": False,
+                                             "message": "Exemplo inválido"},
+                                            status=status.HTTP_400_BAD_REQUEST)
 
                     # Tentar buscar o exemplo existente
-                    example = Example.objects.filter(text_example=text_example).first()
+                    example = Example.objects.filter(
+                        text_example=text_example).first()
 
-                    if example:
-                        print(f"Exemplo encontrado: {example.id} - {example.text_example}")
-                    else:
-                        # Criar novo exemplo
+                    if not example:
                         example_data = {'text_example': text_example}
-                        example_serializer = ExampleCreateSerializer(data=example_data)
-                        
+                        example_serializer = ExampleCreateSerializer(
+                            data=example_data)
+
                         if example_serializer.is_valid(raise_exception=True):
-                            example = example_serializer.save()  # Salva o novo exemplo
-                            example = Example.objects.get(text_example=text_example)
-                            print(f"Novo exemplo criado: {example.id} - {example.text_example}")
+                            example = example_serializer.save()
+                            example = Example.objects.get(
+                                text_example=text_example)
 
                     # Criar relação entre o exemplo e o flashcard do deck
                     new_deck_flashcard_example = {
-                        "example": example.id,  # Aqui usamos o exemplo encontrado ou criado
+                        "example": example.id,
                         "deck_flashcard": deck_flashcard.id
                     }
 
-                    deck_flashcard_example_serializer = DeckFlashcardExampleSerializer(data=new_deck_flashcard_example)
-                    if deck_flashcard_example_serializer.is_valid(raise_exception=True):
-                        deck_flashcard_example_serializer.save()
-                        print("Relação de exemplo salva com sucesso.")
-                    
+                    deck_flashcard_ex_serializer = DeckFlashcardExampleSerializer(
+                        data=new_deck_flashcard_example)
+                    if deck_flashcard_ex_serializer.is_valid(
+                            raise_exception=True):
+                        deck_flashcard_ex_serializer.save() 
 
-                # Processar traduções
                 translations = request.data.get('translations', [])
                 for translation_data in translations:
                     text_translation = translation_data.get('textTranslation')
                     if not text_translation:
-                        return JsonResponse({"success": False, "message": "Tradução inválida"})
+                        return JsonResponse({"success": False,
+                                            "message": "Tradução inválida"},
+                                            status=status.HTTP_400_BAD_REQUEST)
 
-                    # Tentar buscar a tradução existente
                     translation = Translation.objects.filter(
                         text_translation=text_translation).first()
-                    if translation:
-                        print(f"Tradução encontrada: {translation.id} - {translation.text_translation}")
-                    else:
-                        # Criar nova tradução
-                        translation_data = {'text_translation': text_translation}
+                    if not translation:
+                        translation_data = {
+                            'text_translation': text_translation}
                         translation_serializer = TranslationCreateSerializer(
                             data=translation_data)
                         
-                        if translation_serializer.is_valid(raise_exception=True):
-                            translation = translation_serializer.save()  # Salva a nova tradução
+                        if translation_serializer.is_valid(
+                                raise_exception=True):
+                            translation = translation_serializer.save()
                             translation = Translation.objects.get(
                                 text_translation=text_translation)
-                            print(f"Nova tradução criada: {translation.id} - {translation.text_translation}")
 
                     new_deck_flashcard_translation = {
-                        "translation": translation.id,  # Aqui usamos o exemplo encontrado ou criado
+                        "translation": translation.id,
                         "deck_flashcard": deck_flashcard.id
                     }
-                    # Criar relação entre a tradução e o flashcard do deck
-                    new = DeckFlashcardTranslationSerializer(data=new_deck_flashcard_translation)
+                    new = DeckFlashcardTranslationSerializer(
+                        data=new_deck_flashcard_translation)
                     if new.is_valid():
                         new.save()
 
@@ -133,14 +134,15 @@ def create_flashcard(request, deckId):
                         return JsonResponse({"success": False, 
                                              "message": "Áudio inválido"})
 
-                    pronunciation = Pronunciation.objects.filter(keyword=keyword, audio_url=audio_url).first()
-                    if pronunciation:
-                        print(f"Pronúncia encontrada: {pronunciation.id} - {pronunciation.keyword}")
-                    else:
-                        pronunciation = Pronunciation(keyword=keyword, audio_url=audio_url)
+                    pronunciation = Pronunciation.objects.filter(
+                        keyword=keyword,
+                        audio_url=audio_url).first()
+                    if not pronunciation:
+                        pronunciation = Pronunciation(keyword=keyword,
+                                                      audio_url=audio_url)
                         pronunciation.save()
-                        pronunciation = Pronunciation.objects.get(keyword=keyword, audio_url=audio_url)
-                        print(f"Nova pronúncia criada: {pronunciation.id} - {pronunciation.keyword}")
+                        pronunciation = Pronunciation.objects.get(
+                            keyword=keyword, audio_url=audio_url)
 
                     DeckFlashcardPronunciation.objects.create(
                         pronunciation=pronunciation,
@@ -156,13 +158,15 @@ def create_flashcard(request, deckId):
                         return JsonResponse({"success": False,
                                              "message": "Áudio inválido"})
 
-                    image = FlashcardPhoto.objects.filter(deck_flashcard_id=deck_flashcard,
-                                                          image_url=image_url,
-                                                          file_description=file_description)
+                    image = FlashcardPhoto.objects.filter(
+                        deck_flashcard_id=deck_flashcard.id,
+                        file_url=image_url,
+                        file_description=file_description)
                     if not image:
-                        image = FlashcardPhoto.objects.create(deck_flashcard_id=deck_flashcard,
-                                                              image_url=image_url,
-                                                              file_description=file_description)
+                        image = FlashcardPhoto.objects.create(
+                            deck_flashcard_id=deck_flashcard.id,
+                            file_url=image_url,
+                            file_description=file_description)
                         image.save()
 
                 return JsonResponse({"success": True,
@@ -178,25 +182,3 @@ def create_flashcard(request, deckId):
             return JsonResponse({'success': False,
                                  'message': f'Erro: {str(e)}'},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-
-
-# from firebase_config import bucket
-# from werkzeug.utils import secure_filename
-
-# @api_view(['POST'])
-# def upload_audio(request):
-#     if 'file' not in request.FILES:
-#         return Response({'success': False, 'message': 'No file uploaded.'}, status=status.HTTP_400_BAD_REQUEST)
-
-#     audio_file = request.FILES['file']
-#     filename = secure_filename(audio_file.name)
-
-#     # Fazer o upload para o Firebase Storage
-#     blob = bucket.blob(f'temp_audios/{filename}')
-#     blob.upload_from_file(audio_file, content_type=audio_file.content_type)
-
-#     # Obter a URL do arquivo
-#     audio_url = blob.public_url
-
-#     return Response({'success': True, 'url': audio_url}, status=status.HTTP_201_CREATED)
