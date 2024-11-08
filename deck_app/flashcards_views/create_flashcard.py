@@ -55,7 +55,8 @@ def create_flashcard(request, deckId):
                 # Criar a relação entre o usuário e o flashcard
                 UserFlashCard.objects.create(
                     deck_flashcard=deck_flashcard,
-                    user_id=user_id
+                    user_id=user_id,
+                    situation="New"
                 )
 
                 # Processar exemplos
@@ -182,3 +183,7 @@ def create_flashcard(request, deckId):
             return JsonResponse({'success': False,
                                  'message': f'Erro: {str(e)}'},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    else:
+        return JsonResponse({"success": False,
+                             "message": "Metodo não autorizado"},
+                            status=status.HTTP_405_METHOD_NOT_ALLOWED)

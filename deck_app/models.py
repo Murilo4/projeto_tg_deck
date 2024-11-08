@@ -117,7 +117,7 @@ class UserDeckPreferences(models.Model):
 
 class UserFlashCard(models.Model):
     deck_flashcard = models.ForeignKey(
-        DeckFlashCard, on_delete=models.CASCADE)
+        DeckFlashCard, on_delete=models.CASCADE, related_name="userflashcards")
     user_id = models.IntegerField(primary_key=True)
     situation = models.CharField(max_length=50)
     one_star = models.IntegerField(default=None)

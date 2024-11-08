@@ -1,7 +1,7 @@
 from django.urls import path
 from .deck_views.create import create_deck
 from .deck_views.deck_management import get_all_decks, deck_update
-from .deck_views.deck_management import delete_deck
+from .deck_views.deck_management import delete_deck, cron_job
 from .deck_views.deck_management import get_deck, get_standard_decks
 from .deck_views.deck_management import add_deck_to_user
 from .flashcards_views.create_flashcard import create_flashcard
@@ -10,6 +10,7 @@ from .flashcards_views.flashcard_management import get_one_flashcard, delete_fla
 from .audio_text_views.text import get_translated_word, get_example_sentences
 from .audio_text_views.text import get_correct_word
 from .audio_text_views.audio import get_pronunciations
+from .study.study_views import get_flashcards_for_study
 
 urlpatterns = [
     path('create-deck/',
@@ -48,4 +49,9 @@ urlpatterns = [
     #          get_correct_phrase, name="get_correct_phrase")
     path("get-one-flashcard/<int:flashcardId>/<int:deckId>/",
          get_one_flashcard, name="get_one_flashcard"),
+    path("get-flashcards-for-study/<int:deckId>/",
+         get_flashcards_for_study, name="get_flashcards_for_study"),
+    path("cron-job/",
+         cron_job, name="cron_job")
+
 ]

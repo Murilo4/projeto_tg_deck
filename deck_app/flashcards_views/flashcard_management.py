@@ -11,6 +11,7 @@ from ..models import FlashCard, DeckFlashcardExample
 from ..models import DeckFlashcardTranslation, DeckFlashcardPronunciation
 from ..models import Example, Translation, Pronunciation, FlashcardPhoto
 from ..models import FlashCardPriority
+from django.db.models import F
 from django.core.paginator import Paginator
 from django.db.models import Max
 from ..validation.validation_jwt import validate_jwt
@@ -47,6 +48,8 @@ def get_all_flashcard(request, page_number, deckId):
             new = request.GET.get('New', None)
             learning = request.GET.get('Learning', None)
             reviewing = request.GET.get('Reviewing', None)
+            most_reviewed = request.GET.get('MostReviewed', None)
+            least_reviewed = request.GET.get('LeastReviewed', None)
 
             # Busca UserStandardDeck para o usuário
             deck_flashcard_ids = DeckFlashCard.objects.filter(
@@ -68,8 +71,26 @@ def get_all_flashcard(request, page_number, deckId):
                     situation='Reviewing')
 
             # Filtra os FlashCards que têm UserFlashCards correspondentes
-            flashcards = flashcards.filter(id__in=user_flashcards_qs.values_list(
-                'deck_flashcard__flashcard_id', flat=True))
+            flashcards = flashcards.filter(
+                id__in=user_flashcards_qs.values_list(
+                    'deck_flashcard__flashcard_id', flat=True))
+
+            if most_reviewed == 'true':
+                flashcards = flashcards.annotate(
+                    total_reviews=F('userflashcard__one_star') +
+                    F('userflashcard__two_stars') +
+                    F('userflashcard__three_stars') +
+                    F('userflashcard__four_stars') +
+                    F('userflashcard__five_stars')
+                ).order_by('-total_reviews')
+            elif least_reviewed == 'true':
+                flashcards = flashcards.annotate(
+                    total_reviews=F('userflashcard__one_star') +
+                    F('userflashcard__two_stars') +
+                    F('userflashcard__three_stars') +
+                    F('userflashcard__four_stars') +
+                    F('userflashcard__five_stars')
+                ).order_by('total_reviews')
 
             if order_by == 'newest':
                 flashcards = flashcards.order_by('-created_at')
@@ -135,6 +156,10 @@ def get_all_flashcard(request, page_number, deckId):
             return JsonResponse({'success': False,
                                  'message': 'Usuarios não encontrados'},
                                 status=status.HTTP_400_BAD_REQUEST)
+    else:
+        return JsonResponse({"success": False,
+                             "message": "Metodo não autorizado"},
+                            status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 @api_view(['PUT'])
@@ -265,6 +290,10 @@ def update_flashcard(request, flashcardId, deckId):
             return JsonResponse({'success': False,
                                  'message': f'Erro: {str(e)}'},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    else:
+        return JsonResponse({"success": False,
+                             "message": "Metodo não autorizado"},
+                            status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 def remove_old_examples(deck_flashcard, exist_ids):
@@ -568,6 +597,10 @@ def get_one_flashcard(request, flashcardId, deckId):
             return JsonResponse({'success': False,
                                  'message': f'Erro: {str(e)}'},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    else:
+        return JsonResponse({"success": False,
+                             "message": "Metodo não autorizado"},
+                            status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 @api_view(['DELETE'])
@@ -641,6 +674,10 @@ def delete_flashcard(request, flashcardId, deckId):
             return JsonResponse({"success": False,
                                  "message": "Flashcard não encontrado"},
                                 status=status.HTTP_404_NOT_FOUND)
+    else:
+        return JsonResponse({"success": False,
+                             "message": "Metodo não autorizado"},
+                            status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 def delete_examples(deck_flashcard):
