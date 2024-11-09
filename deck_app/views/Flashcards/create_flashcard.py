@@ -30,7 +30,7 @@ def create_flashcard(request, deckId):
                 return JsonResponse({
                     'success': False,
                     'message':
-                    'Token de autorização ausente. Faça login novamente.'
+                    ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             jwt_data = validate_jwt(token)
@@ -66,7 +66,7 @@ def create_flashcard(request, deckId):
 
                     if not text_example:
                         return JsonResponse({"success": False,
-                                             "message": "Exemplo inválido"},
+                                             "message": ["Exemplo inválido"]},
                                             status=status.HTTP_400_BAD_REQUEST)
 
                     # Tentar buscar o exemplo existente
@@ -89,18 +89,18 @@ def create_flashcard(request, deckId):
                         "deck_flashcard": deck_flashcard.id
                     }
 
-                    deck_flashcard_ex_serializer = DeckFlashcardExampleSerializer(
+                    flashcard_ex_serializer = DeckFlashcardExampleSerializer(
                         data=new_deck_flashcard_example)
-                    if deck_flashcard_ex_serializer.is_valid(
+                    if flashcard_ex_serializer.is_valid(
                             raise_exception=True):
-                        deck_flashcard_ex_serializer.save() 
+                        flashcard_ex_serializer.save()
 
                 translations = request.data.get('translations', [])
                 for translation_data in translations:
                     text_translation = translation_data.get('textTranslation')
                     if not text_translation:
                         return JsonResponse({"success": False,
-                                            "message": "Tradução inválida"},
+                                            "message": ["Tradução inválida"]},
                                             status=status.HTTP_400_BAD_REQUEST)
 
                     translation = Translation.objects.filter(
@@ -110,7 +110,7 @@ def create_flashcard(request, deckId):
                             'text_translation': text_translation}
                         translation_serializer = TranslationCreateSerializer(
                             data=translation_data)
-                        
+
                         if translation_serializer.is_valid(
                                 raise_exception=True):
                             translation = translation_serializer.save()
@@ -132,8 +132,8 @@ def create_flashcard(request, deckId):
                     keyword = pronunciation_data.get('keyword')
                     audio_url = pronunciation_data.get('audioUrl')
                     if not keyword or not audio_url:
-                        return JsonResponse({"success": False, 
-                                             "message": "Áudio inválido"})
+                        return JsonResponse({"success": False,
+                                             "message": ["Áudio inválido"]})
 
                     pronunciation = Pronunciation.objects.filter(
                         keyword=keyword,
@@ -157,7 +157,7 @@ def create_flashcard(request, deckId):
 
                     if not image_url or not file_description:
                         return JsonResponse({"success": False,
-                                             "message": "Áudio inválido"})
+                                             "message": ["Áudio inválido"]})
 
                     image = FlashcardPhoto.objects.filter(
                         deck_flashcard_id=deck_flashcard.id,
@@ -172,11 +172,11 @@ def create_flashcard(request, deckId):
 
                 return JsonResponse({"success": True,
                                      "message":
-                                    "Flashcard criado com sucesso"},
+                                    ["Flashcard criado com sucesso"]},
                                     status=status.HTTP_201_CREATED)
 
             return JsonResponse({"success": False,
-                                 "message": flashcard_serializer.errors},
+                                 "message": [flashcard_serializer.errors]},
                                 status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
@@ -185,5 +185,5 @@ def create_flashcard(request, deckId):
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
         return JsonResponse({"success": False,
-                             "message": "Metodo não autorizado"},
+                             "message": ["Metodo não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)

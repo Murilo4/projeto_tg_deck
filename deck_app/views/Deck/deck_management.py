@@ -180,6 +180,7 @@ def get_all_decks(request, page_number):
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
+@csrf_exempt
 @api_view(['GET'])
 def get_standard_decks(request, page_number):
     if request.method == 'GET':
@@ -506,6 +507,7 @@ def delete_deck(request, deckId):
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
+@csrf_exempt
 @api_view(['POST'])
 def add_deck_to_user(request, deckId):
     if request.method == 'POST':

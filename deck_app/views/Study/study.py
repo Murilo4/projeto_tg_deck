@@ -75,7 +75,7 @@ def get_flashcards_for_study(request, deckId):
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Token de autorização ausente. Faça login novamente.'
+                    'message': ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             # Validando o JWT e recuperando o user_id
@@ -83,8 +83,8 @@ def get_flashcards_for_study(request, deckId):
             user_id = jwt_data.get('id')
 
             if not user_id:
-                return JsonResponse({'success': False, 
-                                     'message': 'userId é necessário'}, 
+                return JsonResponse({'success': False,
+                                     'message': ['userId é necessário']},
                                     status=status.HTTP_400_BAD_REQUEST)
 
             # Buscando as preferências do usuário para o deck específico
@@ -94,7 +94,7 @@ def get_flashcards_for_study(request, deckId):
             except UserDeckPreferences.DoesNotExist:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Preferências de deck não encontradas.'
+                    'message': ['Preferências de deck não encontradas.']
                 }, status=status.HTTP_404_NOT_FOUND)
 
             # Quantidade de flashcards por dia
@@ -180,7 +180,7 @@ def get_flashcards_for_study(request, deckId):
                         {
                             'audio_url': pronunciation.pronunciation.audio_url,
                             'keyword': pronunciation.pronunciation.keyword
-                        } 
+                        }
                         for pronunciation in pronunciations
                     ]
 
@@ -198,13 +198,13 @@ def get_flashcards_for_study(request, deckId):
             if not response_data:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Nenhum flashcard encontrado para estudo.'
+                    'message': ['Nenhum flashcard encontrado para estudo.']
                 }, status=status.HTTP_404_NOT_FOUND)
 
             # Retornando os dados dos flashcards para estudo
             return JsonResponse({
                 'success': True,
-                'message': 'Flashcards para estudo retornados.',
+                'message': ['Flashcards para estudo retornados.'],
                 'flashcards': response_data
             }, status=status.HTTP_200_OK)
 
@@ -215,5 +215,5 @@ def get_flashcards_for_study(request, deckId):
 
     else:
         return JsonResponse({"success": False,
-                             "message": "Método não autorizado"},
+                             "message": ["Método não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)

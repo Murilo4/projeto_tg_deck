@@ -33,7 +33,7 @@ def get_all_flashcard(request, page_number, deckId):
                 return JsonResponse({
                     'success': False,
                     'message':
-                    'Token de autorização ausente. Faça login novamente.'
+                    ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             jwt_data = validate_jwt(token)
@@ -41,7 +41,7 @@ def get_all_flashcard(request, page_number, deckId):
 
             if not user_id:
                 return JsonResponse({'success': False,
-                                    'message': 'userId é necessário'},
+                                    'message': ['userId é necessário']},
                                     status=status.HTTP_400_BAD_REQUEST)
 
             order_by = request.GET.get('orderBy', None)
@@ -139,7 +139,7 @@ def get_all_flashcard(request, page_number, deckId):
             if response_data == []:
                 return JsonResponse({"success": False,
                                     'message':
-                                     'Não foi possível encontrar flashcards.'},
+                                     ['Não foi possível encontrar flashcards.']},
                                     status=status.HTTP_404_NOT_FOUND)
 
             return JsonResponse({
@@ -154,14 +154,15 @@ def get_all_flashcard(request, page_number, deckId):
             })
         except exceptions.NotFound:
             return JsonResponse({'success': False,
-                                 'message': 'Usuarios não encontrados'},
+                                 'message': ['Usuarios não encontrados']},
                                 status=status.HTTP_400_BAD_REQUEST)
     else:
         return JsonResponse({"success": False,
-                             "message": "Metodo não autorizado"},
+                             "message": ["Metodo não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
+@csrf_exempt
 @api_view(['PUT'])
 def update_flashcard(request, flashcardId, deckId):
     if request.method == "PUT":
@@ -171,7 +172,7 @@ def update_flashcard(request, flashcardId, deckId):
                 return JsonResponse({
                     'success': False,
                     'message':
-                    'Token de autorização ausente. Faça login novamente.'
+                    ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             jwt_data = validate_jwt(token)
@@ -182,7 +183,7 @@ def update_flashcard(request, flashcardId, deckId):
                 return JsonResponse({
                     "success": False,
                     "message":
-                    "Você não tem permissão para alterar este flashcard"
+                    ["Você não tem permissão para alterar este flashcard"]
                 }, status=status.HTTP_403_FORBIDDEN)
 
             deck_flashcard = DeckFlashCard.objects.get(
@@ -194,7 +195,7 @@ def update_flashcard(request, flashcardId, deckId):
                 if word_wrong is False:
                     return JsonResponse({'success': False,
                                          'message':
-                                        'Palavra não encontrada na frase'},
+                                        ['Palavra não encontrada na frase']},
                                         status=status.HTTP_400_BAD_REQUEST)
 
                 handle_user_flashcards(deck_flashcard, flashcard, user_id)
@@ -247,7 +248,6 @@ def update_flashcard(request, flashcardId, deckId):
                     if existing_trs:
                         existing_tr.add(existing_trs.id)
                         tr_exist_ids.add(existing_trs.id)
-                print("chegou até aqui")
                 if img_ids_to_add:
                     FlashcardPhoto.objects.bulk_create(img_ids_to_add)
                     for image in img_ids_to_add:
@@ -275,16 +275,16 @@ def update_flashcard(request, flashcardId, deckId):
 
             return JsonResponse({
                 "success": True,
-                "message": "Flashcard atualizado com sucesso."
+                "message": ["Flashcard atualizado com sucesso."]
             }, status=status.HTTP_200_OK)
 
         except DeckFlashCard.DoesNotExist:
             return JsonResponse({'success': False,
-                                 'message': 'DeckFlashCard não encontrado.'},
+                                 'message': ['DeckFlashCard não encontrado.']},
                                 status=status.HTTP_404_NOT_FOUND)
         except FlashCard.DoesNotExist:
             return JsonResponse({'success': False,
-                                 'message': 'FlashCard não encontrado.'},
+                                 'message': ['FlashCard não encontrado.']},
                                 status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return JsonResponse({'success': False,
@@ -292,7 +292,7 @@ def update_flashcard(request, flashcardId, deckId):
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
         return JsonResponse({"success": False,
-                             "message": "Metodo não autorizado"},
+                             "message": ["Metodo não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
@@ -545,6 +545,7 @@ def link_pr_to_deck_flashcard(existing_pr_ids, deck_flashcard):
         )
 
 
+@csrf_exempt
 @api_view(['GET'])
 def get_one_flashcard(request, flashcardId, deckId):
     if request.method == "GET":
@@ -587,11 +588,11 @@ def get_one_flashcard(request, flashcardId, deckId):
 
         except FlashCard.DoesNotExist:
             return JsonResponse({"success": False,
-                                 "message": "FlashCard não encontrado"},
+                                 "message": ["FlashCard não encontrado"]},
                                 status=status.HTTP_404_NOT_FOUND)
         except DeckFlashCard.DoesNotExist:
             return JsonResponse({"success": False,
-                                 "message": "DeckFlashCard não encontrado"},
+                                 "message": ["DeckFlashCard não encontrado"]},
                                 status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return JsonResponse({'success': False,
@@ -599,10 +600,11 @@ def get_one_flashcard(request, flashcardId, deckId):
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
         return JsonResponse({"success": False,
-                             "message": "Metodo não autorizado"},
+                             "message": ["Metodo não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
+@csrf_exempt
 @api_view(['DELETE'])
 def delete_flashcard(request, flashcardId, deckId):
     if request.method == 'DELETE':
@@ -610,7 +612,7 @@ def delete_flashcard(request, flashcardId, deckId):
             if not flashcardId:
                 return JsonResponse({"success": False,
                                      "message":
-                                    "É necessario informar o flashcard id"},
+                                    ["É necessario informar o flashcard id"]},
                                     status=status.HTTP_400_BAD_REQUEST)
 
             validate_session()
@@ -620,7 +622,7 @@ def delete_flashcard(request, flashcardId, deckId):
                 return JsonResponse({
                     'success': False,
                     'message':
-                    'Token de autorização ausente. Faça login novamente.'
+                    ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             jwt_data = validate_jwt(token)
@@ -629,7 +631,7 @@ def delete_flashcard(request, flashcardId, deckId):
             if user_id is None:
                 return JsonResponse({"success": False,
                                      "message":
-                                    "Usuario não autenticado"},
+                                    ["Usuario não autenticado"]},
                                     status=status.HTTP_403_FORBIDDEN)
             try:
                 flashcard = FlashCard.objects.filter(id=flashcardId).first()
@@ -638,7 +640,7 @@ def delete_flashcard(request, flashcardId, deckId):
                 if not flashcard:
                     return JsonResponse({"success": False,
                                          "message":
-                                         "Nenhum flashcard localizado"},
+                                         ["Nenhum flashcard localizado"]},
                                         status=status.HTTP_403_FORBIDDEN)
 
                  # Deletar fotos primeiro
@@ -664,19 +666,19 @@ def delete_flashcard(request, flashcardId, deckId):
 
                 return JsonResponse({"success": True,
                                      "message":
-                                     "Flashcard deletado com sucesso"},
+                                     ["Flashcard deletado com sucesso"]},
                                     status=status.HTTP_200_OK)
             except exceptions.NotFound:
                 return JsonResponse({"success": False,
-                                     "message":  "Flashcard não encontrado"},
+                                     "message":  ["Flashcard não encontrado"]},
                                     status=status.HTTP_404_NOT_FOUND)
         except exceptions.ValidationError:
             return JsonResponse({"success": False,
-                                 "message": "Flashcard não encontrado"},
+                                 "message": ["Flashcard não encontrado"]},
                                 status=status.HTTP_404_NOT_FOUND)
     else:
         return JsonResponse({"success": False,
-                             "message": "Metodo não autorizado"},
+                             "message": ["Metodo não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
