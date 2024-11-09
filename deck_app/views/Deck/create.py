@@ -16,7 +16,7 @@ def create_deck(request):
         try:
             validate_session()
 
-            token = request.headers.get('jwt_token')
+            token = request.data.get('jwt_token')
             if not token:
                 return JsonResponse({
                     'success': False,

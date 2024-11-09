@@ -25,7 +25,7 @@ def create_flashcard(request, deckId):
             main_phrase = request.data.get('mainPhrase')
 
             validate_session()
-            token = request.COOKIES.get('jwt_token')
+            token = request.data.get('jwt_token')
             if not token:
                 return JsonResponse({
                     'success': False,

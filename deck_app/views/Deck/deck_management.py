@@ -22,7 +22,7 @@ def get_all_decks(request, page_number):
         try:
             validate_session()
 
-            token = request.COOKIES.get('jwt_token')
+            token = request.data.get('jwt_token')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -187,7 +187,7 @@ def get_standard_decks(request, page_number):
         try:
             validate_session()
 
-            token = request.COOKIES.get('jwt_token')
+            token = request.data.get('jwt_token')
 
             if not token:
                 return JsonResponse({
@@ -316,24 +316,24 @@ def get_deck(request, deckId):
         try:
             validate_session()
 
-            token = request.COOKIES.get('jwt_token')
+            token = request.data.get('jwt_token')
             if not token:
                 return JsonResponse({
                     'success': False,
                     'message':
-                    ['Token de autorização ausente. Faça login novamente.]'
-                }, status= status.HTTP_401_UNAUTHORIZED)
+                    ['Token de autorização ausente. Faça login novamente.']
+                }, status=status.HTTP_401_UNAUTHORIZED)
 
-            jwt_data=validate_jwt(token)
-            user_id=jwt_data.get('id')
+            jwt_data = validate_jwt(token)
+            user_id = jwt_data.get('id')
 
             if not user_id:
                 return JsonResponse({'success': False,
                                      'message': ['userId é necessário']},
                                     status=status.HTTP_400_BAD_REQUEST)
 
-            custom_decks=Deck.objects.get(id=deck_id)
-            custom_decks_serializer=PersonDeckGetSerializer(custom_decks)
+            custom_decks = Deck.objects.get(id=deck_id)
+            custom_decks_serializer = PersonDeckGetSerializer(custom_decks)
 
             return JsonResponse({
                 'success': True,
@@ -355,10 +355,10 @@ def get_deck(request, deckId):
 def deck_update(request, deckId):
     if request.method == 'PUT':
         try:
-            deck_id=deckId
+            deck_id = deckId
             validate_session()
 
-            token=request.headers.get('jwt_token')
+            token = request.data.get('jwt_token')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -366,13 +366,13 @@ def deck_update(request, deckId):
                     ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
-            jwt_data=validate_jwt(token)
-            user_id=jwt_data.get('id')
+            jwt_data = validate_jwt(token)
+            user_id = jwt_data.get('id')
 
-            user_deck_exists=UserDeck.objects.filter(
+            user_deck_exists = UserDeck.objects.filter(
                 user_id=user_id, deck_id=deck_id).exists()
             try:
-                deck=Deck.objects.get(id=deck_id)
+                deck = Deck.objects.get(id=deck_id)
             except Deck.DoesNotExist:
                 return JsonResponse({
                     'success': False,
@@ -390,33 +390,33 @@ def deck_update(request, deckId):
                                     "message":
                                     ["Não autorizado"]},
                                     status=status.HTTP_401_UNAUTHORIZED)
-            user_deck=UserDeck.objects.filter(deck_id=deck_id).count() > 1
+            user_deck = UserDeck.objects.filter(deck_id=deck_id).count() > 1
             if user_deck:
-                new_deck_data={field.name: getattr(
+                new_deck_data = {field.name: getattr(
                     deck, field.name) for field in Deck._meta.fields
                     if field.name not in ['id', 'public']}
 
                 # Altera o campo 'public'
-                new_deck_data['public']=0
-                new_deck=Deck.objects.create(**new_deck_data)
+                new_deck_data['public'] = 0
+                new_deck = Deck.objects.create(**new_deck_data)
 
                 # Desvincular o usuário do deck antigo
                 UserDeck.objects.filter(
                     deck_id=deck_id, user_id=user_id).delete()
 
                 # Associar o novo deck ao usuário
-                user_deck_serializer=UserDeck.objects.create(
+                user_deck_serializer = UserDeck.objects.create(
                     user_id=user_id, deck_id=new_deck.id)
 
                 if user_deck_serializer.is_valid():
                     user_deck_serializer.save()
 
                 # Atualizar o novo deck com os dados recebidos
-                serializer=PersonDeckUpdateSerializer(
+                serializer = PersonDeckUpdateSerializer(
                     new_deck, data=request.data, partial=True)
             else:
                 # Se existir apenas um registro, atualize-o
-                serializer=PersonDeckUpdateSerializer(
+                serializer = PersonDeckUpdateSerializer(
                     deck, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
@@ -444,10 +444,10 @@ def deck_update(request, deckId):
 def delete_deck(request, deckId):
     if request.method == 'DELETE':
         try:
-            deck_id=deckId
+            deck_id = deckId
             validate_session()
 
-            token=request.COOKIES.get('jwt_token')
+            token = request.data.get('jwt_token')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -456,14 +456,14 @@ def delete_deck(request, deckId):
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             # Função de validação do JWT
-            jwt_data=validate_jwt(token)
-            user_id=jwt_data.get('id')
+            jwt_data = validate_jwt(token)
+            user_id = jwt_data.get('id')
 
             if not user_id:
                 return JsonResponse({'success': False,
                                      'message': ['userId é necessário']},
                                     status=status.HTTP_400_BAD_REQUEST)
-            deck_user=UserDeck.objects.filter(
+            deck_user = UserDeck.objects.filter(
                 deck_id=deck_id, user_id=user_id)
             if deck_user is None:
                 return JsonResponse({'success': False,
@@ -471,7 +471,7 @@ def delete_deck(request, deckId):
                                      ['Deck não encontrado para este usuário']},
                                     status=status.HTTP_404_NOT_FOUND)
             # Busca o Deck completo usando o ID
-            deck=Deck.objects.filter(id=deck_id).first()
+            deck = Deck.objects.filter(id=deck_id).first()
             if deck is None:
                 return JsonResponse({'success': False,
                                      'message':
@@ -483,7 +483,7 @@ def delete_deck(request, deckId):
                 deck.delete()
 
             elif deck.type_deck == 'Custom' and deck.public == 1:
-                user_deck=UserDeck.objects.filter(
+                user_deck = UserDeck.objects.filter(
                     deck_id=deck_id).count() > 1
 
                 if user_deck:
@@ -511,9 +511,9 @@ def delete_deck(request, deckId):
 @api_view(['POST'])
 def add_deck_to_user(request, deckId):
     if request.method == 'POST':
-        deck_id=deckId
+        deck_id = deckId
         try:
-            token=request.COOKIES.get('jwt_token')
+            token = request.data.get('jwt_token')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -521,8 +521,8 @@ def add_deck_to_user(request, deckId):
                     ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
-            jwt_data=validate_jwt(token)
-            user_id=jwt_data.get('id')
+            jwt_data = validate_jwt(token)
+            user_id = jwt_data.get('id')
 
             if not deck_id:
                 return JsonResponse({'success': False,
@@ -534,10 +534,10 @@ def add_deck_to_user(request, deckId):
                                     "message": ["Deck já pertence ao usuário."]},
                                     status=status.HTTP_409_CONFLICT)
 
-            standard_deck=Deck.objects.get(Q(id=deck_id) & (
+            standard_deck = Deck.objects.get(Q(id=deck_id) & (
                 Q(type_deck="Standard") | Q(type_deck="Custom")) & Q(public=1))
 
-            user_standard_deck=UserDeck.objects.create(
+            user_standard_deck = UserDeck.objects.create(
                 user_id=user_id, deck_id=standard_deck.id)
 
             if user_standard_deck is None:
@@ -546,7 +546,7 @@ def add_deck_to_user(request, deckId):
                                     status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             # Adicionando flashcards do deck para o usuário
-            deck_flashcards=DeckFlashCard.objects.filter(deck_id=deck_id)
+            deck_flashcards = DeckFlashCard.objects.filter(deck_id=deck_id)
             for deck_flashcard in deck_flashcards:
                 UserFlashCard.objects.create(
                     user_id=user_id,

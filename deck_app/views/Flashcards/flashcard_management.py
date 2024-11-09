@@ -28,7 +28,7 @@ def get_all_flashcard(request, page_number, deckId):
         try:
             validate_session()
 
-            token = request.COOKIES.get('jwt_token')
+            token = request.data.get('jwt_token')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -167,7 +167,7 @@ def get_all_flashcard(request, page_number, deckId):
 def update_flashcard(request, flashcardId, deckId):
     if request.method == "PUT":
         try:
-            token = request.COOKIES.get('jwt_token')
+            token = request.data.get('jwt_token')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -617,7 +617,7 @@ def delete_flashcard(request, flashcardId, deckId):
 
             validate_session()
 
-            token = request.COOKIES.get('jwt_token')
+            token = request.data.get('jwt_token')
             if not token:
                 return JsonResponse({
                     'success': False,

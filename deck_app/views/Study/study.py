@@ -71,7 +71,7 @@ def get_flashcards_for_study(request, deckId):
     if request.method == 'GET':
         try:
             # Recuperando o token de autenticação
-            token = request.COOKIES.get('jwt_token')
+            token = request.data.get('jwt_token')
             if not token:
                 return JsonResponse({
                     'success': False,
