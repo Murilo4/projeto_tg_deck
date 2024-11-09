@@ -1,13 +1,15 @@
 from django.utils import timezone
-from ..models import UserFlashCard, UserDeckPreferences, DeckFlashcardPronunciation
-from ..models import UserDeckPreferences, UserFlashCard, DeckFlashcardExample
-from ..models import FlashCardPriority, FlashCard, DeckFlashCard, DeckFlashcardTranslation
+from ...models import UserFlashCard, UserDeckPreferences
+from ...models import DeckFlashcardPronunciation
+from ...models import DeckFlashcardExample, DeckFlashCard
+from ...models import FlashCardPriority, FlashCard
+from ...models import DeckFlashcardTranslation
 from rest_framework import status
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
-from ..validation.validation_jwt import validate_jwt
-from ..validation.validation_session import validate_session
-from ..serializers_flashcard import FlashCardGetSerializer
+from ...validation.validation_jwt import validate_jwt
+from ...validation.validation_session import validate_session
+from ...serializers_flashcard import FlashCardGetSerializer
 
 
 @api_view(["POST"])
@@ -41,7 +43,7 @@ def update_flashcard_priority(deck_flashcard_id, user_id):
         recent_feedback = feedbacks.first()
         if recent_feedback.last_feedback is not None:
             total_weight += 2  # Peso maior para o feedback mais recente
-            total_score += recent_feedback.last_feedback * 2  # Considera a última avaliação
+            total_score += recent_feedback.last_feedback * 2
 
         # Adiciona os feedbacks anteriores
         for feedback in feedbacks[1:]:  # Ignora o feedback mais recente
@@ -119,7 +121,7 @@ def get_flashcards_for_study(request, deckId):
             ).prefetch_related(
                 'deckflashcard_set__userflashcards'  # Usando a relação reversa
             ).filter(
-                deckflashcard__userflashcards__situation='New'  # Referenciando corretamente a relação via userflashcards
+                deckflashcard__userflashcards__situation='New'
             )[:new_per_day]
 
             flashcards_to_study['new_flashcards'] = new_flashcards
@@ -130,7 +132,7 @@ def get_flashcards_for_study(request, deckId):
             ).prefetch_related(
                 'deckflashcard_set__userflashcards'  # Usando a relação reversa
             ).filter(
-                deckflashcard__userflashcards__situation='Learning'  # Referenciando corretamente a relação via userflashcards
+                deckflashcard__userflashcards__situation='Learning'
             )[:learning_per_day]
 
             flashcards_to_study['learning_flashcards'] = learning_flashcards
@@ -142,28 +144,27 @@ def get_flashcards_for_study(request, deckId):
             ).prefetch_related(
                 'deckflashcard_set__userflashcards'  # Usando a relação reversa
             ).filter(
-                deckflashcard__userflashcards__situation='Reviewing',  # Referenciando corretamente a relação
-                deckflashcard__userflashcards__next_time__lte=now  # Usando next_time da tabela UserFlashCard
+                deckflashcard__userflashcards__situation='Reviewing',
+                deckflashcard__userflashcards__next_time__lte=now
             )[:reviewing_per_day]
 
-            if not review_flashcards:  # Se não houver flashcards de revisão disponíveis
+            if not review_flashcards:
                 # Buscar os flashcards com a data `next_time` mais próxima
                 review_flashcards = FlashCard.objects.filter(
                     id__in=deck_flashcard_ids
                 ).prefetch_related(
-                    'deckflashcard_set__userflashcards'  # Usando a relação reversa
+                    'deckflashcard_set__userflashcards'
                 ).filter(
                     deckflashcard__userflashcards__situation='Reviewing',
-                    deckflashcard__userflashcards__next_time__gt=now  # Procurando os próximos flashcards para revisão
-                ).order_by('deckflashcard__userflashcards__next_time')[:reviewing_per_day]
+                    deckflashcard__userflashcards__next_time__gt=now
+                ).order_by(
+                    'deckflashcard__userflashcards__next_time')[:reviewing_per_day]
 
             flashcards_to_study['review_flashcards'] = review_flashcards
 
-            # Agora precisamos buscar os exemplos, traduções e pronúncias relacionadas aos flashcards
             response_data = []
             for situation, flashcards in flashcards_to_study.items():
                 for flashcard in flashcards:
-                    # Buscando as informações adicionais de Example, Translation, Pronunciation
                     examples = DeckFlashcardExample.objects.filter(
                         deck_flashcard__flashcard_id=flashcard.id).select_related('example')[:2]
                     translations = DeckFlashcardTranslation.objects.filter(
@@ -208,11 +209,11 @@ def get_flashcards_for_study(request, deckId):
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            return JsonResponse({"success": False, 
-                                 "message": str(e)}, 
-                                 status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse({"success": False,
+                                 "message": str(e)},
+                                status=status.HTTP_400_BAD_REQUEST)
 
     else:
-        return JsonResponse({"success": False, 
-                             "message": "Método não autorizado"}, 
-                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return JsonResponse({"success": False,
+                             "message": "Método não autorizado"},
+                            status=status.HTTP_405_METHOD_NOT_ALLOWED)

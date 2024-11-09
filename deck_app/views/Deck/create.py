@@ -3,10 +3,10 @@ from django.http import JsonResponse
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import exceptions
-from ..serializers_deck import PersonDeckSerializer, UDPreferencesSerializer
-from ..serializers_deck import UserDeckSerializer, CreateStandardDecks
-from ..validation.validation_session import validate_session
-from ..validation.validation_jwt import validate_jwt
+from ...serializers_deck import PersonDeckSerializer, UDPreferencesSerializer
+from ...serializers_deck import UserDeckSerializer, CreateStandardDecks
+from ...validation.validation_session import validate_session
+from ...validation.validation_jwt import validate_jwt
 
 
 @csrf_exempt

@@ -1,21 +1,21 @@
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from rest_framework import exceptions
-from ..serializers_flashcard import FlashCardGetSerializer
-from ..serializers_flashcard import UserFlashCardGetSerializer
-from ..serializers_flashcard import FlashCardGetOneSerializer
+from ...serializers_flashcard import FlashCardGetSerializer
+from ...serializers_flashcard import UserFlashCardGetSerializer
+from ...serializers_flashcard import FlashCardGetOneSerializer
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
-from ..models import Deck, DeckFlashCard, UserFlashCard
-from ..models import FlashCard, DeckFlashcardExample
-from ..models import DeckFlashcardTranslation, DeckFlashcardPronunciation
-from ..models import Example, Translation, Pronunciation, FlashcardPhoto
-from ..models import FlashCardPriority
+from ...models import Deck, DeckFlashCard, UserFlashCard
+from ...models import FlashCard, DeckFlashcardExample
+from ...models import DeckFlashcardTranslation, DeckFlashcardPronunciation
+from ...models import Example, Translation, Pronunciation, FlashcardPhoto
+from ...models import FlashCardPriority
 from django.db.models import F
 from django.core.paginator import Paginator
 from django.db.models import Max
-from ..validation.validation_jwt import validate_jwt
-from ..validation.validation_session import validate_session
+from ...validation.validation_jwt import validate_jwt
+from ...validation.validation_session import validate_session
 from django.db import transaction
 import re
 

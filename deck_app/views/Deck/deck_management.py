@@ -1,19 +1,18 @@
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from rest_framework import exceptions
-from ..serializers_deck import PersonDeckGetSerializer
-from ..serializers_deck import PersonDeckUpdateSerializer
-from ..serializers_deck import PersonDeckGetStandardSerializer
+from ...serializers_deck import PersonDeckGetSerializer
+from ...serializers_deck import PersonDeckUpdateSerializer
+from ...serializers_deck import PersonDeckGetStandardSerializer
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
-from ..models import Deck, UserDeck, DeckFlashCard, UserFlashCard
-from ..models import UserDeckPreferences
-from django.db.models import Q, Min, Max
+from ...models import Deck, UserDeck, DeckFlashCard, UserFlashCard
+from ...models import UserDeckPreferences
+from django.db.models import Q, Max
 from django.core.paginator import Paginator
-from ..validation.validation_jwt import validate_jwt
+from ...validation.validation_jwt import validate_jwt
 from django.db.models import Count
-from ..validation.validation_session import validate_session
-from django.db.models.functions import Coalesce
+from ...validation.validation_session import validate_session
 
 
 @csrf_exempt
@@ -192,16 +191,20 @@ def get_standard_decks(request, page_number):
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Token de autorização ausente. Faça login novamente.'
+                    'message':
+                    'Token de autorização ausente. Faça login novamente.'
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             jwt_data = validate_jwt(token)
             user_id = jwt_data.get('id')
 
             if not user_id:
-                return JsonResponse({'success': False, 'message': 'userId é necessário'}, status=status.HTTP_400_BAD_REQUEST)
+                return JsonResponse({'success': False,
+                                     'message': 'userId é necessário'},
+                                    status=status.HTTP_400_BAD_REQUEST)
 
-            user_decks = UserDeck.objects.filter(user_id=user_id).values_list('deck_id', flat=True)
+            user_decks = UserDeck.objects.filter(
+                user_id=user_id).values_list('deck_id', flat=True)
 
             # Filtros da query
             difficult = request.GET.get('difficult', None)
@@ -210,23 +213,28 @@ def get_standard_decks(request, page_number):
             max_reviews = request.GET.get('maxReviews', None)
 
             # Filtrar os decks padrão que não estão nos decks do usuário
-            standard_decks = Deck.objects.filter(type_deck='Standard').exclude(id__in=user_decks)
+            standard_decks = Deck.objects.filter(
+                type_deck='Standard').exclude(id__in=user_decks)
 
             # Filtragem de reviews
             if min_reviews is not None:
-                standard_decks = standard_decks.filter(reviews__gte=int(min_reviews))
+                standard_decks = standard_decks.filter(
+                    reviews__gte=int(min_reviews))
             if max_reviews is not None:
-                standard_decks = standard_decks.filter(reviews__lte=int(max_reviews))
+                standard_decks = standard_decks.filter(
+                    reviews__lte=int(max_reviews))
 
             # Depuração: Verifique os decks após a filtragem de reviews
-            print("Decks após a filtragem de reviews:", list(standard_decks.values('id', 'reviews')))
+            print("Decks após a filtragem de reviews:", list(
+                standard_decks.values('id', 'reviews')))
 
             # Filtragem de dificuldade
             if difficult:
                 standard_decks = standard_decks.filter(difficult=difficult)
 
             # Anotação de contagem de flashcards
-            standard_decks = standard_decks.annotate(flashcard_count=Count('deckflashcard'))
+            standard_decks = standard_decks.annotate(
+                flashcard_count=Count('deckflashcard'))
 
             # Ordenação conforme especificado
             if order_by == 'newest':
@@ -245,15 +253,17 @@ def get_standard_decks(request, page_number):
             page_obj = paginator.get_page(page_number)
 
             # Serialização
-            standard_decks_serializer = PersonDeckGetStandardSerializer(page_obj, many=True)
+            standard_decks_serializer = PersonDeckGetStandardSerializer(
+                page_obj, many=True)
 
             # Resposta
             response_data = []
             reviews_counts_list = []
 
             for index, deck in enumerate(page_obj):
-                reviews_counts_list.append(deck.reviews)  # Adicionando a contagem de reviews
-                flashcard_count = deck.flashcard_count if hasattr(deck, 'flashcard_count') else 0
+                reviews_counts_list.append(deck.reviews)
+                flashcard_count = deck.flashcard_count if hasattr(
+                    deck, 'flashcard_count') else 0
                 response_data.append({
                     **standard_decks_serializer.data[index],
                     'flashcards': flashcard_count
@@ -264,9 +274,10 @@ def get_standard_decks(request, page_number):
             reviews_max = max(reviews_counts_list) if reviews_counts_list else 0
 
             if not response_data:
-                return JsonResponse({"success": False, 
-                                     'message': 'Não foi possível encontrar decks.'}, 
-                                     status=status.HTTP_404_NOT_FOUND)
+                return JsonResponse({"success": False,
+                                     'message':
+                                    'Não foi possível encontrar decks.'},
+                                    status=status.HTTP_404_NOT_FOUND)
 
             return JsonResponse({
                 'success': True,
@@ -281,13 +292,13 @@ def get_standard_decks(request, page_number):
             }, status=status.HTTP_200_OK)
 
         except exceptions.NotFound:
-            return JsonResponse({'success': False, 
-                                 'message': 'Usuários não encontrados'}, 
-                                 status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse({'success': False,
+                                 'message': 'Usuários não encontrados'},
+                                status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return JsonResponse({'success': False, 
-                                 'message': f'Erro: {str(e)}'}, 
-                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return JsonResponse({'success': False,
+                                 'message': f'Erro: {str(e)}'},
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
         return JsonResponse({"success": False,
                              "message": "Metodo não autorizado"},
@@ -552,7 +563,7 @@ def add_deck_to_user(request, deckId):
                              "message": "Metodo não autorizado"},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
- 
+
 @csrf_exempt
 @api_view(['GET'])
 def cron_job(request):

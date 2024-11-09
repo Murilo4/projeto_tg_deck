@@ -2,17 +2,17 @@ from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
-from ..serializers_flashcard import CreateFlashCardSerializer
-from ..serializers_flashcard import DeckFlashcardExampleSerializer
-from ..serializers_flashcard import DeckFlashcardTranslationSerializer
-from ..WordAudioSerializer import ExampleCreateSerializer
-from ..WordAudioSerializer import TranslationCreateSerializer
-from ..models import UserFlashCard, FlashcardPhoto
-from ..models import DeckFlashCard
-from ..models import Pronunciation, DeckFlashcardPronunciation
-from ..validation.validation_jwt import validate_jwt
-from ..validation.validation_session import validate_session
-from ..models import Example, Translation
+from ...serializers_flashcard import CreateFlashCardSerializer
+from ...serializers_flashcard import DeckFlashcardExampleSerializer
+from ...serializers_flashcard import DeckFlashcardTranslationSerializer
+from ...WordAudioSerializer import ExampleCreateSerializer
+from ...WordAudioSerializer import TranslationCreateSerializer
+from ...models import UserFlashCard, FlashcardPhoto
+from ...models import DeckFlashCard
+from ...models import Pronunciation, DeckFlashcardPronunciation
+from ...validation.validation_jwt import validate_jwt
+from ...validation.validation_session import validate_session
+from ...models import Example, Translation
 
 
 @csrf_exempt

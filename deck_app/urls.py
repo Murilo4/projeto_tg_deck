@@ -1,16 +1,16 @@
 from django.urls import path
-from .deck_views.create import create_deck
-from .deck_views.deck_management import get_all_decks, deck_update
-from .deck_views.deck_management import delete_deck, cron_job
-from .deck_views.deck_management import get_deck, get_standard_decks
-from .deck_views.deck_management import add_deck_to_user
-from .flashcards_views.create_flashcard import create_flashcard
-from .flashcards_views.flashcard_management import get_all_flashcard, update_flashcard
-from .flashcards_views.flashcard_management import get_one_flashcard, delete_flashcard
-from .audio_text_views.text import get_translated_word, get_example_sentences
-from .audio_text_views.text import get_correct_word
-from .audio_text_views.audio import get_pronunciations
-from .study.study_views import get_flashcards_for_study
+from .views.Deck.create import create_deck
+from .views.Deck.deck_management import get_all_decks, deck_update
+from .views.Deck.deck_management import delete_deck, cron_job
+from .views.Deck.deck_management import get_deck, get_standard_decks
+from .views.Deck.deck_management import add_deck_to_user
+from .views.Flashcards.create_flashcard import create_flashcard
+from .views.Flashcards.flashcard_management import get_all_flashcard, update_flashcard
+from .views.Flashcards.flashcard_management import get_one_flashcard, delete_flashcard
+from .views.Audio.text import get_translated_word, get_example_sentences
+from .views.Audio.text import get_correct_word, get_correct_phrase
+from .views.Audio.audio import get_pronunciations
+from .views.Study.study import get_flashcards_for_study
 
 urlpatterns = [
     path('create-deck/',
@@ -45,8 +45,8 @@ urlpatterns = [
          get_pronunciations, name='available_voices'),
     path('get-correct-word/',
          get_correct_word, name="get_correct_word"),
-    #     path("get-correct-phrase/",
-    #          get_correct_phrase, name="get_correct_phrase")
+    path("get-correct-phrase/",
+         get_correct_phrase, name="get_correct_phrase"),
     path("get-one-flashcard/<int:flashcardId>/<int:deckId>/",
          get_one_flashcard, name="get_one_flashcard"),
     path("get-flashcards-for-study/<int:deckId>/",

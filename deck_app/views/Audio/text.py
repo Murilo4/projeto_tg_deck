@@ -35,32 +35,45 @@ HEADERS = {
     "Content-Type": "application/json; charset=UTF-8"
 }
 
+@csrf_exempt
+@api_view(["POST"])
+def get_correct_phrase(request):
+    if request.method == 'POST':
+        # Pega o texto do corpo da requisição
+        phrase = request.data.get('phrase', '')
 
-# @api_view(["POST"])
-# def get_correct_phrase(request):
-#     phrase = request.data.get('phrase')
+        # Se o texto não for vazio, verifique a gramática
+        if phrase:
+            corrected_text = correct_phrases(phrase)
+            return JsonResponse({'original_text': phrase,
+                                 'corrected_text': corrected_text})
+        else:
+            return JsonResponse({'error': 'No text provided'}, status=400)
 
-#     if not phrase:
-#         return JsonResponse({'success': False,
-#                              'message': 'Frase é obrigatório.'})
-#     try:
-#         api = ReversoContextAPI(phrase, "")
-#         corrections = api.get_spell_check_suggestions()  # Método que retorna sugestões de correção
-
-#         if not corrections:
-#             return JsonResponse({'success': True, 'message': 'A frase está correta', 'corrected_phrase': phrase})
-
-#         return JsonResponse({'success': True, 'message': 'Correções sugeridas', 'corrections': corrections})
-
-#     except Exception as e:
-#         return JsonResponse({'success': False, 'message': f"Erro ao buscar correções: {str(e)}"})
-
-#     except Exception as e:
-#         return JsonResponse({'success': False,
-#                             'message':
-#                             f"Erro ao buscar traduções: {str(e)}"})
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
 
 
+def correct_phrases(phrase):
+    url = "https://api.languagetool.org/v2/check"
+    params = {
+        'text': phrase,
+        'language': 'en'
+    }
+
+    response = requests.post(url, data=params)
+    result = response.json()
+
+    # Corrigir o texto com base nas sugestões da API
+    corrected_text = phrase
+    for match in result.get('matches', []):
+        for replacement in match['replacements']:
+            # Aplicando a primeira correção sugerida
+            corrected_text = corrected_text[:match['offset']] + replacement['value'] + corrected_text[match['offset'] + match['length']:]
+
+    return corrected_text
+
+
+@csrf_exempt
 @api_view(['POST'])
 def get_translated_word(request):
     if request.method == 'POST':
@@ -130,7 +143,8 @@ def get_example_sentences(request):
 
             # Realiza uma chamada para garantir que há uma resposta válida
             response = requests.post("https://context.reverso.net/bst-query-service", headers=HEADERS,
-                                     data=json.dumps(api._ReversoContextAPI__data))
+                                     data=json.dumps(
+                                         api._ReversoContextAPI__data))
 
             if response.status_code != 200:
                 return JsonResponse({'success': False,
@@ -142,7 +156,9 @@ def get_example_sentences(request):
                 # Certifique-se de acessar a chave correta
                 examples_json = response.json().get("list", [])
             except ValueError:
-                return JsonResponse({'success': False, 'message': "Resposta JSON inválida ou vazia."})
+                return JsonResponse({'success': False,
+                                     'message':
+                                     "Resposta JSON inválida ou vazia."})
 
             # Processa exemplos se houver
             examples = []
@@ -152,14 +168,16 @@ def get_example_sentences(request):
                 })
 
             if not examples:
-                return JsonResponse({'success': True, 'message': "Nenhum exemplo encontrado.", "examples": []})
+                return JsonResponse({'success': True, 
+                                     'message': "Nenhum exemplo encontrado.",
+                                     "examples": []})
 
             # Retorno para o usuário
-            return JsonResponse({'success': True, "message": "Frases de exemplo obtidas", "examples": examples})
+            return JsonResponse({'success': True,
+                                 "message": "Frases de exemplo obtidas",
+                                 "examples": examples})
 
         except Exception as e:
             print("Erro ao buscar frases:", e)
-            return JsonResponse({'success': False, 'message': f"Erro ao buscar frases: {str(e)}"})
-
-
-
+            return JsonResponse({'success': False,
+                                 'message': f"Erro ao buscar frases: {str(e)}"})
