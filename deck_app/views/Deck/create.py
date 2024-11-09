@@ -21,7 +21,7 @@ def create_deck(request):
                 return JsonResponse({
                     'success': False,
                     'message':
-                    'Token de autorização ausente. Faça login novamente.'
+                    ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             jwt_data = validate_jwt(token)
@@ -45,19 +45,19 @@ def create_deck(request):
 
             if not user_id:
                 return JsonResponse({'success': False,
-                                    'message': 'Usuario não encontrado'},
+                                    'message': ['Usuario não encontrado']},
                                     status=status.HTTP_400_BAD_REQUEST)
 
             if not deck_name:
                 return JsonResponse({'success': False,
-                                    'message': 'Deck name is required'},
+                                    'message': ['Ñome do deck é requerido ']},
                                     status=status.HTTP_400_BAD_REQUEST)
             if not description:
                 description = ' '
 
             if not img_url:
                 return JsonResponse({'success': False,
-                                    'message': 'Image URL is required'},
+                                    'message': ['Image URL é necessario']},
                                     status=status.HTTP_400_BAD_REQUEST
                                     )
             if not new:
@@ -100,12 +100,12 @@ def create_deck(request):
                             user_deck_preferences.save()
                             return JsonResponse({'success': True,
                                                 'message':
-                                                 'Deck criado com sucesso'},
+                                                 ['Deck criado com sucesso']},
                                                 status=status.HTTP_201_CREATED)
                 else:
                     return JsonResponse({'success': False,
                                         'message':
-                                         'Não foi possivel validar os dados'},
+                                         ['Não foi possivel validar os dados']},
                                         status=status.HTTP_400_BAD_REQUEST)
             else:
                 new_deck_default = {
@@ -121,14 +121,14 @@ def create_deck(request):
                 if serializer.is_valid(raise_exception=True):
                     serializer.save()
                     return JsonResponse({'success': True,
-                                        'message': 'Deck criado com sucesso'},
+                                        'message': ['Deck criado com sucesso']},
                                         status=status.HTTP_201_CREATED)
         except exceptions.NotFound:
             return JsonResponse({'success': False,
                                  'message':
-                                'não foi possivel validar os dados inseridos'},
+                                ['não foi possivel validar os dados inseridos']},
                                 status=status.HTTP_404_NOT_FOUND)
     else:
         return JsonResponse({'success': False,
-                            'message':  'Método não suportado'},
+                            'message':  ['Método não suportado']},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)

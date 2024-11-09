@@ -35,6 +35,7 @@ HEADERS = {
     "Content-Type": "application/json; charset=UTF-8"
 }
 
+
 @csrf_exempt
 @api_view(["POST"])
 def get_correct_phrase(request):
