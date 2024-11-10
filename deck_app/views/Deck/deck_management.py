@@ -22,7 +22,7 @@ def get_all_decks(request, page_number):
         try:
             validate_session()
 
-            token = request.data.get('jwt_token')
+            token = request.data.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -159,7 +159,7 @@ def get_all_decks(request, page_number):
             return JsonResponse({
                 'success': True,
                 'message': 'dados retornados',
-                'decks': response_data,
+                'decks': [response_data],
                 'flashcardMin': flashcard_min,
                 'flashcardMax': flashcard_max,
                 'hasNext': page_obj.has_next(),
@@ -185,9 +185,8 @@ def get_all_decks(request, page_number):
 def get_standard_decks(request, page_number):
     if request.method == 'GET':
         try:
-            validate_session()
 
-            token = request.data.get('jwt_token')
+            token = request.data.get('Authorization')
 
             if not token:
                 return JsonResponse({
@@ -225,11 +224,6 @@ def get_standard_decks(request, page_number):
                 standard_decks = standard_decks.filter(
                     reviews__lte=int(max_reviews))
 
-            # Depuração: Verifique os decks após a filtragem de reviews
-            print("Decks após a filtragem de reviews:", list(
-                standard_decks.values('id', 'reviews')))
-
-            # Filtragem de dificuldade
             if difficult:
                 standard_decks = standard_decks.filter(difficult=difficult)
 
@@ -275,7 +269,6 @@ def get_standard_decks(request, page_number):
                 reviews_counts_list) if reviews_counts_list else 0
             reviews_max = max(
                 reviews_counts_list) if reviews_counts_list else 0
-
             if not response_data:
                 return JsonResponse({"success": False,
                                      'message':
@@ -285,7 +278,7 @@ def get_standard_decks(request, page_number):
             return JsonResponse({
                 'success': True,
                 'message': ['dados retornados'],
-                'standardDecks': response_data,
+                'standardDecks': [response_data],
                 'minReviews': reviews_min,
                 'maxReviews': reviews_max,
                 'hasNext': page_obj.has_next(),
@@ -316,7 +309,7 @@ def get_deck(request, deckId):
         try:
             validate_session()
 
-            token = request.data.get('jwt_token')
+            token = request.data.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -334,12 +327,31 @@ def get_deck(request, deckId):
 
             custom_decks = Deck.objects.get(id=deck_id)
             custom_decks_serializer = PersonDeckGetSerializer(custom_decks)
-
+            # deck_data = {
+            #     'type': custom_decks_serializer.data.get("type_deck"),
+            #     'colorPredefinition': custom_decks_serializer.data.get(
+            #         "color_predefinition"),
+            #     'title': custom_decks_serializer.data.get("title"),
+            #     'image': custom_decks_serializer.data.get("image"),
+            #     'lastModification': custom_decks_serializer.data.get(
+            #         "lastModification"), 
+            #     'createdData': custom_decks_serializer.data.get("createdData"),
+            #     'description': custom_decks_serializer.data.get(
+            #         "description_deck"),
+            #     'public': custom_decks_serializer.data.get("public"),
+            #     'difficult': custom_decks_serializer.data.get("difficult"),
+            #     'stars': custom_decks_serializer.data.get("stars"),
+            #     'reviews': custom_decks_serializer.data.get("reviews"),
+            #     'favorite': custom_decks_serializer.data.get("favorite"),
+            #     'flashcards': custom_decks_serializer.data.get("flashcards"),
+            #     'last_time': custom_decks_serializer.data.get("last_time")
+            # }
             return JsonResponse({
                 'success': True,
                 'message': 'dados retornados',
-                'custom_decks': custom_decks_serializer.data
-            })
+                'custom_decks': [custom_decks_serializer.data]
+            },
+             status=status.HTTP_200_OK)
         except exceptions.NotFound:
             return JsonResponse({'success': False,
                                  'message': ['Usuarios não encontrados']},
@@ -358,7 +370,7 @@ def deck_update(request, deckId):
             deck_id = deckId
             validate_session()
 
-            token = request.data.get('jwt_token')
+            token = request.data.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -447,7 +459,7 @@ def delete_deck(request, deckId):
             deck_id = deckId
             validate_session()
 
-            token = request.data.get('jwt_token')
+            token = request.data.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -513,7 +525,7 @@ def add_deck_to_user(request, deckId):
     if request.method == 'POST':
         deck_id = deckId
         try:
-            token = request.data.get('jwt_token')
+            token = request.data.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,

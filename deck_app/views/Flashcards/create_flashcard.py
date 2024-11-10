@@ -23,9 +23,16 @@ def create_flashcard(request, deckId):
             # Extrair dados da requisição
             keyword = request.data.get('keyword')
             main_phrase = request.data.get('mainPhrase')
-
+            if not keyword:
+                return JsonResponse({"success": False,
+                                     "message": "Palavra chave não encontrada"},
+                                    status=status.HTTP_400_BAD_REQUEST)
+            if not main_phrase:
+                return JsonResponse({"success": False,
+                                     "message": "Frase não encontrada"},
+                                    status=status.HTTP_400_BAD_REQUEST)
             validate_session()
-            token = request.data.get('jwt_token')
+            token = request.data.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -157,7 +164,7 @@ def create_flashcard(request, deckId):
 
                     if not image_url or not file_description:
                         return JsonResponse({"success": False,
-                                             "message": ["Áudio inválido"]})
+                                             "message": ["Imagem inválida"]})
 
                     image = FlashcardPhoto.objects.filter(
                         deck_flashcard_id=deck_flashcard.id,

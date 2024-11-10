@@ -28,7 +28,7 @@ def get_all_flashcard(request, page_number, deckId):
         try:
             validate_session()
 
-            token = request.data.get('jwt_token')
+            token = request.data.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -146,7 +146,7 @@ def get_all_flashcard(request, page_number, deckId):
                 'success': True,
                 'message': 'dados retornados',
                 'deck':  deck_name.title,
-                'flashcard': response_data,
+                'flashcard': [response_data],
                 'hasNext': page_obj.has_next(),
                 'hasPrevious': page_obj.has_previous(),
                 'pageNumber': page_number,
@@ -167,7 +167,7 @@ def get_all_flashcard(request, page_number, deckId):
 def update_flashcard(request, flashcardId, deckId):
     if request.method == "PUT":
         try:
-            token = request.data.get('jwt_token')
+            token = request.data.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -583,7 +583,7 @@ def get_one_flashcard(request, flashcardId, deckId):
 
             return JsonResponse({
                 'success': True,
-                'flashcard': response_data
+                'flashcard': [response_data]
             }, status=status.HTTP_200_OK)
 
         except FlashCard.DoesNotExist:

@@ -16,7 +16,7 @@ def create_deck(request):
         try:
             validate_session()
 
-            token = request.data.get('jwt_token')
+            token = request.data.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -53,7 +53,10 @@ def create_deck(request):
                                     'message': ['Ñome do deck é requerido ']},
                                     status=status.HTTP_400_BAD_REQUEST)
             if not description:
-                description = ' '
+                return JsonResponse({"success": False,
+                                     "message": 
+                                    ["É necessario informar a descrição"]},
+                                    status=status.HTTP_400_BAD_REQUEST)
 
             if not img_url:
                 return JsonResponse({'success': False,
@@ -61,11 +64,11 @@ def create_deck(request):
                                     status=status.HTTP_400_BAD_REQUEST
                                     )
             if not new:
-                new = 0
+                new = 2
             if not learning:
-                learning = 0
+                learning = 5
             if not review:
-                review = 0
+                review = 2
 
             if type_deck == "Custom":
                 new_deck = {
@@ -121,7 +124,8 @@ def create_deck(request):
                 if serializer.is_valid(raise_exception=True):
                     serializer.save()
                     return JsonResponse({'success': True,
-                                        'message': ['Deck criado com sucesso']},
+                                        'message':
+                                         ['Deck criado com sucesso']},
                                         status=status.HTTP_201_CREATED)
         except exceptions.NotFound:
             return JsonResponse({'success': False,
