@@ -3,7 +3,7 @@ from .views.Deck.create import create_deck
 from .views.Deck.deck_management import get_all_decks, deck_update
 from .views.Deck.deck_management import delete_deck, cron_job
 from .views.Deck.deck_management import get_deck, get_standard_decks
-from .views.Deck.deck_management import add_deck_to_user
+from .views.Deck.deck_management import add_deck_to_user, get_all_decks_to_user
 from .views.Flashcards.create_flashcard import create_flashcard
 from .views.Flashcards.flashcard_management import get_all_flashcard, update_flashcard
 from .views.Flashcards.flashcard_management import get_one_flashcard, delete_flashcard
@@ -52,6 +52,7 @@ urlpatterns = [
     path("get-flashcards-for-study/<int:deckId>/",
          get_flashcards_for_study, name="get_flashcards_for_study"),
     path("cron-job/",
-         cron_job, name="cron_job")
-
+         cron_job, name="cron_job"),
+    path("get-all-decks-to-user/userId/",
+         get_all_decks_to_user, name="get_all_decks_to_user")
 ]

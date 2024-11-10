@@ -13,6 +13,7 @@ from django.core.paginator import Paginator
 from ...validation.validation_jwt import validate_jwt
 from django.db.models import Count
 from ...validation.validation_session import validate_session
+from ..Flashcards.flashcard_management import delete_flashcard
 
 
 @csrf_exempt
@@ -178,6 +179,51 @@ def get_all_decks(request, page_number):
         return JsonResponse({"success": False,
                              "message": ["Metodo não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    
+
+@csrf_exempt
+@api_view(['GET'])
+def get_all_decks_to_user(request, userId):
+    if request.method == 'GET':
+        try:
+            if request.method == 'GET':
+                user_id = userId
+                if not user_id:
+                    return JsonResponse({
+                        "success": False,
+                        "message": ["Token inválido"]
+                    }, status=status.HTTP_401_UNAUTHORIZED)
+
+                if not user_id:
+                    return JsonResponse({
+                        "success": False,
+                        "message": ["Usuário não autorizado a visualizar esses decks."]
+                    }, status=status.HTTP_403_FORBIDDEN)
+
+                # Buscar todos os decks relacionados ao usuário
+                decks = Deck.objects.filter(user_id=user_id)
+
+                # Se não encontrar nenhum deck
+                if not decks.exists():
+                    return JsonResponse({
+                        "success": False,
+                        "message": ["Nenhum deck encontrado para este usuário."]
+                    }, status=status.HTTP_404_NOT_FOUND)
+
+                # Serializa os decks encontrados
+                serializer = PersonDeckGetSerializer(decks, many=True)
+
+                # Retorna a lista de decks
+                return JsonResponse({
+                    "success": True,
+                    "decks": serializer.data
+                }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return JsonResponse({
+                "success": False,
+                "message": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @csrf_exempt
@@ -463,8 +509,7 @@ def delete_deck(request, deckId):
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'message':
-                    ['Token de autorização ausente. Faça login novamente.']
+                    'message': ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             # Função de validação do JWT
@@ -477,18 +522,25 @@ def delete_deck(request, deckId):
                                     status=status.HTTP_400_BAD_REQUEST)
             deck_user = UserDeck.objects.filter(
                 deck_id=deck_id, user_id=user_id)
-            if deck_user is None:
+            if not deck_user:
                 return JsonResponse({'success': False,
-                                     'message':
-                                     ['Deck não encontrado para este usuário']},
+                                     'message': ['Deck não encontrado para este usuário']},
                                     status=status.HTTP_404_NOT_FOUND)
             # Busca o Deck completo usando o ID
             deck = Deck.objects.filter(id=deck_id).first()
-            if deck is None:
+            if not deck:
                 return JsonResponse({'success': False,
-                                     'message':
-                                     ['Deck não encontrado para este usuário']},
+                                     'message': ['Deck não encontrado para este usuário']},
                                     status=status.HTTP_404_NOT_FOUND)
+            
+            # Agora, antes de deletar o deck, deletar todos os flashcards associados ao deck
+            deck_flashcards = DeckFlashCard.objects.filter(deck_id=deck_id)
+            
+            for deck_flashcard in deck_flashcards:
+                flashcard_id = deck_flashcard.flashcard_id
+                # Chama a função de delete_flashcard passando os parâmetros necessários
+                delete_flashcard(request, flashcard_id, deck_id)
+
             # Verificação do tipo de deck e remoção conforme necessário
             if deck.type_deck == 'Custom' and deck.public == 0:
                 deck_user.delete()
@@ -515,7 +567,7 @@ def delete_deck(request, deckId):
                                 status=status.HTTP_400_BAD_REQUEST)
     else:
         return JsonResponse({"success": False,
-                             "message": ["Metodo não autorizado"]},
+                             "message": ["Método não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
