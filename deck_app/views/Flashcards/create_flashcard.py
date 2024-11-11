@@ -13,82 +13,82 @@ from ...models import Pronunciation, DeckFlashcardPronunciation
 from ...validation.validation_jwt import validate_jwt
 from ...validation.validation_session import validate_session
 from ...models import Example, Translation
-import requests
-from firebase_admin import storage
-import firebase_admin
-from firebase_admin import credentials, initialize_app
-from django.conf import settings
-import os
-import io
+# import requests
+# from firebase_admin import storage
+# import firebase_admin
+# from firebase_admin import credentials, initialize_app
+# from django.conf import settings
+# import os
+# import io
 
 
-def initialize_firebase():
-    cred_path = settings.FIREBASE_CREDENTIALS_PATH
-    if not firebase_admin._apps:
-        cred = credentials.Certificate(cred_path)
-        firebase_admin.initialize_app(cred, {
-            'storageBucket': "flashvibe-13cf5.appspot.com"
-        })
-        initialize_app(cred)
+# def initialize_firebase():
+#     cred_path = settings.FIREBASE_CREDENTIALS_PATH
+#     if not firebase_admin._apps:
+#         cred = credentials.Certificate(cred_path)
+#         firebase_admin.initialize_app(cred, {
+#             'storageBucket': "flashvibe-13cf5.appspot.com"
+#         })
+#         initialize_app(cred)
 
 
-initialize_firebase()
+# initialize_firebase()
 
 
-def generate_audio_filename(keyword, country, sex, voice_name):
-    """
-    Gera o nome do arquivo de áudio com base no formato desejado:
-    keyword_pais_sexo_voicename.mp3
-    """
-    # Substituir espaços por underscores e garantir que o nome esteja formatado corretamente
-    formatted_keyword = keyword.replace(" ", "_")
-    formatted_country = country.upper().replace(" ", "_")  # País com letras maiúsculas
-    formatted_sex = sex.lower()  # Sexo com letras minúsculas
-    formatted_voice_name = voice_name.replace(
-        " ", "_")  # Nome da voz sem espaços
+# def generate_audio_filename(keyword, country, sex, voice_name):
+#     """
+#     Gera o nome do arquivo de áudio com base no formato desejado:
+#     keyword_pais_sexo_voicename.mp3
+#     """
+#     # Substituir espaços por underscores e garantir que o nome esteja formatado corretamente
+#     formatted_keyword = keyword.replace(" ", "_")
+#     formatted_country = country.upper().replace(" ", "_")  # País com letras maiúsculas
+#     formatted_sex = sex.lower()  # Sexo com letras minúsculas
+#     formatted_voice_name = voice_name.replace(
+#         " ", "_")  # Nome da voz sem espaços
 
-    # Gerar o nome do arquivo
-    filename = f"{formatted_keyword}_{formatted_country}_{formatted_sex}_{formatted_voice_name}.mp3"
-    return filename
+#     # Gerar o nome do arquivo
+#     filename = f"{formatted_keyword}_{formatted_country}_{formatted_sex}_{formatted_voice_name}.mp3"
+#     return filename
 
 
-def upload_audio_from_url_to_firebase(audio_url, keyword, country, sex, voice_name):
-    # Baixar o arquivo de áudio da URL
-    response = requests.get(audio_url)
+# def upload_audio_from_url_to_firebase(audio_url, keyword, country, sex, voice_name):
+#     # Baixar o arquivo de áudio da URL
+#     response = requests.get(audio_url)
     
-    if response.status_code == 200:
-        # Gerar o nome do arquivo com base nas informações fornecidas
-        filename = generate_audio_filename(keyword, country, sex, voice_name)
-        print(f"Gerando nome do arquivo: {filename}")  # Verifique o nome gerado no terminal/log
+#     if response.status_code == 200:
+#         # Gerar o nome do arquivo com base nas informações fornecidas
+#         filename = generate_audio_filename(keyword, country, sex, voice_name)
+#         print(f"Gerando nome do arquivo: {filename}")  # Verifique o nome gerado no terminal/log
         
-        # Acessar o bucket do Firebase Storage
-        bucket = storage.bucket()  # Isso vai acessar o bucket configurado durante a inicialização
+#         # Acessar o bucket do Firebase Storage
+#         bucket = storage.bucket()  # Isso vai acessar o bucket configurado durante a inicialização
         
-        # Definir o caminho da pasta e o nome do arquivo no Firebase Storage
-        folder_path = f"pronunciations/"  # Simula pastas no Storage
-        file_path = f"{folder_path}{filename}"
-        print(f"Arquivo será salvo em: {file_path}")  # Verifique o caminho de destino no Firebase
+#         # Definir o caminho da pasta e o nome do arquivo no Firebase Storage
+#         folder_path = f"pronunciations/"  # Simula pastas no Storage
+#         file_path = f"{folder_path}{filename}"
+#         print(f"Arquivo será salvo em: {file_path}")  # Verifique o caminho de destino no Firebase
         
-        # Criar o objeto de armazenamento (blob) no Firebase Storage
-        blob = bucket.blob(file_path)
+#         # Criar o objeto de armazenamento (blob) no Firebase Storage
+#         blob = bucket.blob(file_path)
         
-        # Usar io.BytesIO para armazenar o conteúdo em memória
-        audio_data = io.BytesIO(response.content)
+#         # Usar io.BytesIO para armazenar o conteúdo em memória
+#         audio_data = io.BytesIO(response.content)
         
-        # Fazer upload para o Firebase Storage
-        try:
-            # Verifique o método correto de upload para o blob
-            blob.upload_from_file(audio_data, content_type="audio/mp3")
-            print("Arquivo enviado com sucesso!")  # Mensagem de sucesso
-            # Obter a URL pública do arquivo armazenado
-            audio_url = blob.public_url
-            return audio_url
-        except Exception as e:
-            print(f"Erro ao fazer upload: {str(e)}")
-            raise
-    else:
-        print(f"Erro ao baixar o arquivo: {response.status_code}")
-        raise Exception("Falha ao baixar o áudio da URL.")
+#         # Fazer upload para o Firebase Storage
+#         try:
+#             # Verifique o método correto de upload para o blob
+#             blob.upload_from_file(audio_data, content_type="audio/mp3")
+#             print("Arquivo enviado com sucesso!")  # Mensagem de sucesso
+#             # Obter a URL pública do arquivo armazenado
+#             audio_url = blob.public_url
+#             return audio_url
+#         except Exception as e:
+#             print(f"Erro ao fazer upload: {str(e)}")
+#             raise
+#     else:
+#         print(f"Erro ao baixar o arquivo: {response.status_code}")
+#         raise Exception("Falha ao baixar o áudio da URL.")
 
 
 @csrf_exempt
@@ -213,34 +213,34 @@ def create_flashcard(request, deckId):
                 pronunciations = request.data.get('pronunciations', [])
                 for pronunciation_data in pronunciations:
                     audio_url = pronunciation_data.get('audioUrl')
-                    country = pronunciation_data.get(
-                        'country')  # País de origem
-                    sex = pronunciation_data.get('sex')  # Sexo da voz
-                    voice_name = pronunciation_data.get(
-                        'voiceName')  # Nome da voz
+                    # country = pronunciation_data.get(
+                    #     'country')  # País de origem
+                    # sex = pronunciation_data.get('sex')  # Sexo da voz
+                    # voice_name = pronunciation_data.get(
+                    #     'voiceName')  # Nome da voz
 
-                    if not audio_url or not country or not sex or not voice_name:
-                        return JsonResponse({"success": False,
-                                             "error": "Informações da pronúncia inválidas"})
+                    # if not audio_url or not country or not sex or not voice_name:
+                    #     return JsonResponse({"success": False,
+                    #                          "error": "Informações da pronúncia inválidas"})
 
                     # Fazer o upload do áudio para o Firebase
-                    try:
-                        firebase_audio_url = upload_audio_from_url_to_firebase(
-                            audio_url, keyword, country, sex, voice_name)
-                    except Exception as e:
-                        return JsonResponse({"success": False,
-                                             "error": str(e)},
-                                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    # try:
+                        # firebase_audio_url = upload_audio_from_url_to_firebase(
+                            # audio_url, keyword, country, sex, voice_name)
+                    # except Exception as e:
+                    #     return JsonResponse({"success": False,
+                    #                          "error": str(e)},
+                    #                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                     # Salvar a pronúncia no banco de dados
                     pronunciation = Pronunciation.objects.filter(
-                        keyword=keyword, audio_url=firebase_audio_url).first()
+                        keyword=keyword, audio_url=audio_url).first()
                     if not pronunciation:
                         pronunciation = Pronunciation(keyword=keyword,
-                                                      audio_url=firebase_audio_url)
+                                                      audio_url=audio_url)
                         pronunciation.save()
                         pronunciation = Pronunciation.objects.filter(
-                            keyword=keyword, audio_url=firebase_audio_url).first()
+                            keyword=keyword, audio_url=audio_url).first()
 
                     DeckFlashcardPronunciation.objects.create(
                         pronunciation=pronunciation,
