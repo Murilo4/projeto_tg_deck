@@ -75,7 +75,7 @@ def get_flashcards_for_study(request, deckId):
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'message': ['Token de autorização ausente. Faça login novamente.']
+                    'error': ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             # Validando o JWT e recuperando o user_id
@@ -84,7 +84,7 @@ def get_flashcards_for_study(request, deckId):
 
             if not user_id:
                 return JsonResponse({'success': False,
-                                     'message': ['userId é necessário']},
+                                     'error': ['userId é necessário']},
                                     status=status.HTTP_400_BAD_REQUEST)
 
             # Buscando as preferências do usuário para o deck específico
@@ -94,7 +94,7 @@ def get_flashcards_for_study(request, deckId):
             except UserDeckPreferences.DoesNotExist:
                 return JsonResponse({
                     'success': False,
-                    'message': ['Preferências de deck não encontradas.']
+                    'error': ['Preferências de deck não encontradas.']
                 }, status=status.HTTP_404_NOT_FOUND)
 
             # Quantidade de flashcards por dia
@@ -198,7 +198,7 @@ def get_flashcards_for_study(request, deckId):
             if not response_data:
                 return JsonResponse({
                     'success': False,
-                    'message': ['Nenhum flashcard encontrado para estudo.']
+                    'error': ['Nenhum flashcard encontrado para estudo.']
                 }, status=status.HTTP_404_NOT_FOUND)
 
             # Retornando os dados dos flashcards para estudo
@@ -210,10 +210,10 @@ def get_flashcards_for_study(request, deckId):
 
         except Exception as e:
             return JsonResponse({"success": False,
-                                 "message": str(e)},
+                                 "error": str(e)},
                                 status=status.HTTP_400_BAD_REQUEST)
 
     else:
         return JsonResponse({"success": False,
-                             "message": ["Método não autorizado"]},
+                             "error": ["Método não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)

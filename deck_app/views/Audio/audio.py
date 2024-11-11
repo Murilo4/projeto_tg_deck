@@ -1,54 +1,50 @@
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from reverso_api.voice import ReversoVoiceAPI, get_voices
 import os
-from django.conf import settings
+import requests
+FORVO_API_KEY = os.getenv("FORVO_KEY")
 
 
 @csrf_exempt
 @api_view(['POST'])
 def get_pronunciations(request):
-    word = request.data.get('word')
-    if not word:
-        return JsonResponse({'success': False,
-                             'message': 'A palavra é obrigatória.'})
+    word = request.data.get("word")
 
+    url = f"https://apifree.forvo.com/action/word-pronunciations/format/json/word/{word}/id_lang_speak/39/key/{FORVO_API_KEY}/"
+
+    # Realizar a requisição à API
     try:
-        native_voices = {
-            'US': ['Karen22k', 'Kenny22k', 'Sharon22k', 'Will22k'],
-            'British': ['Graham22k', 'Lucy22k', 'Peter22k', 'Rachel22k']
-        }
-        # Diretório onde os áudios serão salvos
-        custom_path = os.path.join(settings.MEDIA_ROOT, 'audios')
-        os.makedirs(custom_path, exist_ok=True)
+        # Realizar a requisição à API
+        response = requests.get(url)
+        
+        # Exibir o código de status da resposta e o conteúdo
+        print("Status Code:", response.status_code)
+        print("Response Body:", response.text)
 
-        pronunciations = []
-        voices = get_voices()  # Obtenha a lista de vozes disponíveis
+        if response.status_code == 200:
+            data = response.json()
 
-        for language, voice_list in voices.items():
-            if language in native_voices:
-                filtered_voices = [
-                    voice for voice in voice_list if voice.name in native_voices[language]]
-
-                for voice in filtered_voices:
-                    audio_file_path = os.path.join(
-                        custom_path, f"{word}_{voice.name}.mp3")
-                    voice_api = ReversoVoiceAPI(text=word, voice=voice)
-                    voice_api.write_to_file(audio_file_path)
-                    pronunciations.append({
-                        'voice': {
-                            'name': voice.name,
-                            'language': voice.language,
-                            'gender': voice.gender
-                        },
-                        'audio_file': audio_file_path
-                    })
-        return JsonResponse({
-            'success': True,
-            'message': 'Pronúncias obtidas com sucesso.',
-            'pronunciations': pronunciations
-        })
-    except Exception as e:
-        return JsonResponse({'success': False,
-                             'message': f"Erro ao buscar a pronúncia: {str(e)}"})
+            if data.get('items'):
+                # Lista para armazenar as informações de áudio
+                audio_info = []
+                
+                # Iterar sobre todas as opções de áudio disponíveis
+                for item in data['items']:
+                    audio_data = {
+                        'audioUrl': item.get('pathmp3'),
+                        'voiceName': item.get('username'),
+                        'sex': item.get('sex'),
+                        'country': item.get('country')
+                    }
+                    audio_info.append(audio_data)
+                
+                # Retornar as informações de áudio
+                return JsonResponse({'audio_info': audio_info})
+            else:
+                return JsonResponse({'error': 'Pronúncia não encontrada.'}, status=404)
+        else:
+            return JsonResponse({'error': f'Erro na requisição à API do Forvo: {response.status_code} - {response.text}'}, status=response.status_code)
+    
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({'error': f'Erro de conexão com a API do Forvo: {str(e)}'}, status=500)

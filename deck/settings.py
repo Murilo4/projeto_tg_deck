@@ -64,7 +64,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://flashvibe.onrender.com",
     "https://projeto-tg-back-end.onrender.com"
 ]
-
+FIREBASE_CREDENTIALS_PATH = os.path.join(BASE_DIR, 'deck_app/firebase_config/firebase.json')
 # # HSTS (HTTP Strict Transport Security)
 SECURE_HSTS_SECONDS = 3600  # 1 hora
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True

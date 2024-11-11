@@ -13,6 +13,83 @@ from ...models import Pronunciation, DeckFlashcardPronunciation
 from ...validation.validation_jwt import validate_jwt
 from ...validation.validation_session import validate_session
 from ...models import Example, Translation
+import requests
+from firebase_admin import storage
+import firebase_admin
+from firebase_admin import credentials, initialize_app
+from django.conf import settings
+import os
+import io
+
+
+def initialize_firebase():
+    cred_path = settings.FIREBASE_CREDENTIALS_PATH
+    if not firebase_admin._apps:
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred, {
+            'storageBucket': "flashvibe-13cf5.appspot.com"
+        })
+        initialize_app(cred)
+
+
+initialize_firebase()
+
+
+def generate_audio_filename(keyword, country, sex, voice_name):
+    """
+    Gera o nome do arquivo de áudio com base no formato desejado:
+    keyword_pais_sexo_voicename.mp3
+    """
+    # Substituir espaços por underscores e garantir que o nome esteja formatado corretamente
+    formatted_keyword = keyword.replace(" ", "_")
+    formatted_country = country.upper().replace(" ", "_")  # País com letras maiúsculas
+    formatted_sex = sex.lower()  # Sexo com letras minúsculas
+    formatted_voice_name = voice_name.replace(
+        " ", "_")  # Nome da voz sem espaços
+
+    # Gerar o nome do arquivo
+    filename = f"{formatted_keyword}_{formatted_country}_{
+        formatted_sex}_{formatted_voice_name}.mp3"
+    return filename
+
+
+def upload_audio_from_url_to_firebase(audio_url, keyword, country, sex, voice_name):
+    # Baixar o arquivo de áudio da URL
+    response = requests.get(audio_url)
+    
+    if response.status_code == 200:
+        # Gerar o nome do arquivo com base nas informações fornecidas
+        filename = generate_audio_filename(keyword, country, sex, voice_name)
+        print(f"Gerando nome do arquivo: {filename}")  # Verifique o nome gerado no terminal/log
+        
+        # Acessar o bucket do Firebase Storage
+        bucket = storage.bucket()  # Isso vai acessar o bucket configurado durante a inicialização
+        
+        # Definir o caminho da pasta e o nome do arquivo no Firebase Storage
+        folder_path = f"pronunciations/"  # Simula pastas no Storage
+        file_path = f"{folder_path}{filename}"
+        print(f"Arquivo será salvo em: {file_path}")  # Verifique o caminho de destino no Firebase
+        
+        # Criar o objeto de armazenamento (blob) no Firebase Storage
+        blob = bucket.blob(file_path)
+        
+        # Usar io.BytesIO para armazenar o conteúdo em memória
+        audio_data = io.BytesIO(response.content)
+        
+        # Fazer upload para o Firebase Storage
+        try:
+            # Verifique o método correto de upload para o blob
+            blob.upload_from_file(audio_data, content_type="audio/mp3")
+            print("Arquivo enviado com sucesso!")  # Mensagem de sucesso
+            # Obter a URL pública do arquivo armazenado
+            audio_url = blob.public_url
+            return audio_url
+        except Exception as e:
+            print(f"Erro ao fazer upload: {str(e)}")
+            raise
+    else:
+        print(f"Erro ao baixar o arquivo: {response.status_code}")
+        raise Exception("Falha ao baixar o áudio da URL.")
 
 
 @csrf_exempt
@@ -25,23 +102,23 @@ def create_flashcard(request, deckId):
             main_phrase = request.data.get('mainPhrase')
             if not keyword:
                 return JsonResponse({"success": False,
-                                     "message": "Palavra chave não encontrada"},
+                                     "error": "Palavra chave não encontrada"},
                                     status=status.HTTP_400_BAD_REQUEST)
             if not main_phrase:
                 return JsonResponse({"success": False,
-                                     "message": "Frase não encontrada"},
+                                     "error": "Frase não encontrada"},
                                     status=status.HTTP_400_BAD_REQUEST)
-            validate_session()
-            token = request.data.get('Authorization')
-            if not token:
-                return JsonResponse({
-                    'success': False,
-                    'message':
-                    ['Token de autorização ausente. Faça login novamente.']
-                }, status=status.HTTP_401_UNAUTHORIZED)
+            # validate_session()
+            # token = request.data.get('Authorization')
+            # if not token:
+            #     return JsonResponse({
+            #         'success': False,
+            #         'error':
+            #         ['Token de autorização ausente. Faça login novamente.']
+            #     }, status=status.HTTP_401_UNAUTHORIZED)
 
-            jwt_data = validate_jwt(token)
-            user_id = jwt_data.get('id')
+            # jwt_data = validate_jwt(token)
+            user_id = 1  # jwt_data.get('id')
 
             # Criar o flashcard
             flashcard_data = {
@@ -73,7 +150,7 @@ def create_flashcard(request, deckId):
 
                     if not text_example:
                         return JsonResponse({"success": False,
-                                             "message": ["Exemplo inválido"]},
+                                             "error": ["Exemplo inválido"]},
                                             status=status.HTTP_400_BAD_REQUEST)
 
                     # Tentar buscar o exemplo existente
@@ -107,7 +184,7 @@ def create_flashcard(request, deckId):
                     text_translation = translation_data.get('textTranslation')
                     if not text_translation:
                         return JsonResponse({"success": False,
-                                            "message": ["Tradução inválida"]},
+                                            "error": ["Tradução inválida"]},
                                             status=status.HTTP_400_BAD_REQUEST)
 
                     translation = Translation.objects.filter(
@@ -136,21 +213,35 @@ def create_flashcard(request, deckId):
                 # Processar pronúncias
                 pronunciations = request.data.get('pronunciations', [])
                 for pronunciation_data in pronunciations:
-                    keyword = pronunciation_data.get('keyword')
                     audio_url = pronunciation_data.get('audioUrl')
-                    if not keyword or not audio_url:
-                        return JsonResponse({"success": False,
-                                             "message": ["Áudio inválido"]})
+                    country = pronunciation_data.get(
+                        'country')  # País de origem
+                    sex = pronunciation_data.get('sex')  # Sexo da voz
+                    voice_name = pronunciation_data.get(
+                        'voiceName')  # Nome da voz
 
+                    if not audio_url or not country or not sex or not voice_name:
+                        return JsonResponse({"success": False,
+                                             "error": "Informações da pronúncia inválidas"})
+
+                    # Fazer o upload do áudio para o Firebase
+                    try:
+                        firebase_audio_url = upload_audio_from_url_to_firebase(
+                            audio_url, keyword, country, sex, voice_name)
+                    except Exception as e:
+                        return JsonResponse({"success": False,
+                                             "error": str(e)},
+                                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                    # Salvar a pronúncia no banco de dados
                     pronunciation = Pronunciation.objects.filter(
-                        keyword=keyword,
-                        audio_url=audio_url).first()
+                        keyword=keyword, audio_url=firebase_audio_url).first()
                     if not pronunciation:
                         pronunciation = Pronunciation(keyword=keyword,
-                                                      audio_url=audio_url)
+                                                      audio_url=firebase_audio_url)
                         pronunciation.save()
-                        pronunciation = Pronunciation.objects.get(
-                            keyword=keyword, audio_url=audio_url)
+                        pronunciation = Pronunciation.objects.filter(
+                            keyword=keyword, audio_url=firebase_audio_url).first()
 
                     DeckFlashcardPronunciation.objects.create(
                         pronunciation=pronunciation,
@@ -163,18 +254,23 @@ def create_flashcard(request, deckId):
                     file_description = image_data.get('description')
 
                     if not image_url or not file_description:
-                        return JsonResponse({"success": False,
-                                             "message": ["Imagem inválida"]})
+                        return JsonResponse({"success": False, 
+                                             "error": ["Imagem inválida"]})
 
-                    image = FlashcardPhoto.objects.filter(
+                    # Verifica se já existe uma foto com os mesmos dados
+                    photo = FlashcardPhoto.objects.filter(
                         deck_flashcard_id=deck_flashcard.id,
                         file_url=image_url,
-                        file_description=file_description)
-                    if not image:
-                        image = FlashcardPhoto.objects.create(
+                        file_description=file_description
+                    ).first()
+
+                    # Se não encontrar, cria uma nova
+                    if not photo:
+                        image = FlashcardPhoto(
                             deck_flashcard_id=deck_flashcard.id,
                             file_url=image_url,
-                            file_description=file_description)
+                            file_description=file_description
+                        )
                         image.save()
 
                 return JsonResponse({"success": True,
@@ -183,14 +279,14 @@ def create_flashcard(request, deckId):
                                     status=status.HTTP_201_CREATED)
 
             return JsonResponse({"success": False,
-                                 "message": [flashcard_serializer.errors]},
+                                 "error": [flashcard_serializer.errors]},
                                 status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
             return JsonResponse({'success': False,
-                                 'message': f'Erro: {str(e)}'},
+                                 'error': f'Erro: {str(e)}'},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
         return JsonResponse({"success": False,
-                             "message": ["Metodo não autorizado"]},
+                             "error": ["Metodo não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)

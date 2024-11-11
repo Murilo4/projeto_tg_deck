@@ -94,7 +94,7 @@ class FlashCardPriority(models.Model):
 class Pronunciation(models.Model):
     id = models.IntegerField(primary_key=True)
     keyword = models.CharField(max_length=255)
-    audio_url = models.CharField(max_length=255)
+    audio_url = models.TextField()
     created_at = models.DateTimeField(auto_now=True)
     updated_at = models.DateTimeField(auto_now_add=True)
 

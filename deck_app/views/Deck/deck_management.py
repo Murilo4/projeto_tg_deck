@@ -160,7 +160,7 @@ def get_all_decks(request, page_number):
             return JsonResponse({
                 'success': True,
                 'message': 'dados retornados',
-                'decks': [response_data],
+                'decks': response_data,
                 'flashcardMin': flashcard_min,
                 'flashcardMax': flashcard_max,
                 'hasNext': page_obj.has_next(),
@@ -191,13 +191,13 @@ def get_all_decks_to_user(request, userId):
                 if not user_id:
                     return JsonResponse({
                         "success": False,
-                        "message": ["Token inválido"]
+                        "error": ["Token inválido"]
                     }, status=status.HTTP_401_UNAUTHORIZED)
 
                 if not user_id:
                     return JsonResponse({
                         "success": False,
-                        "message": ["Usuário não autorizado a visualizar esses decks."]
+                        "error": ["Usuário não autorizado a visualizar esses decks."]
                     }, status=status.HTTP_403_FORBIDDEN)
 
                 # Buscar todos os decks relacionados ao usuário
@@ -207,7 +207,7 @@ def get_all_decks_to_user(request, userId):
                 if not decks.exists():
                     return JsonResponse({
                         "success": False,
-                        "message": ["Nenhum deck encontrado para este usuário."]
+                        "error": ["Nenhum deck encontrado para este usuário."]
                     }, status=status.HTTP_404_NOT_FOUND)
 
                 # Serializa os decks encontrados
@@ -222,7 +222,7 @@ def get_all_decks_to_user(request, userId):
         except Exception as e:
             return JsonResponse({
                 "success": False,
-                "message": str(e)
+                "error": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -237,7 +237,7 @@ def get_standard_decks(request, page_number):
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'message':
+                    'error':
                     ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -324,7 +324,7 @@ def get_standard_decks(request, page_number):
             return JsonResponse({
                 'success': True,
                 'message': ['dados retornados'],
-                'standardDecks': [response_data],
+                'standardDecks': response_data,
                 'minReviews': reviews_min,
                 'maxReviews': reviews_max,
                 'hasNext': page_obj.has_next(),
@@ -359,7 +359,7 @@ def get_deck(request, deckId):
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'message':
+                    'error':
                     ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -368,7 +368,7 @@ def get_deck(request, deckId):
 
             if not user_id:
                 return JsonResponse({'success': False,
-                                     'message': ['userId é necessário']},
+                                     'error': ['userId é necessário']},
                                     status=status.HTTP_400_BAD_REQUEST)
 
             custom_decks = Deck.objects.get(id=deck_id)
@@ -400,11 +400,11 @@ def get_deck(request, deckId):
              status=status.HTTP_200_OK)
         except exceptions.NotFound:
             return JsonResponse({'success': False,
-                                 'message': ['Usuarios não encontrados']},
+                                 'error': ['Usuarios não encontrados']},
                                 status=status.HTTP_400_BAD_REQUEST)
     else:
         return JsonResponse({"success": False,
-                             "message": ["Metodo não autorizado"]},
+                             "error": ["Metodo não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
@@ -420,7 +420,7 @@ def deck_update(request, deckId):
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'message':
+                    'error':
                     ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -434,18 +434,18 @@ def deck_update(request, deckId):
             except Deck.DoesNotExist:
                 return JsonResponse({
                     'success': False,
-                    'message': ['Deck não localizado']
+                    'error': ['Deck não localizado']
                 }, status=status.HTTP_404_NOT_FOUND)
 
             if not user_deck_exists:
                 return JsonResponse({"sucess": False,
-                                     "message":
+                                     "error":
                                     ["Não autorizado"]},
                                     status=status.HTTP_401_UNAUTHORIZED)
 
             if deck.type_deck == "Standard":
                 return JsonResponse({"sucess": False,
-                                    "message":
+                                    "error":
                                     ["Não autorizado"]},
                                     status=status.HTTP_401_UNAUTHORIZED)
             user_deck = UserDeck.objects.filter(deck_id=deck_id).count() > 1
@@ -484,16 +484,16 @@ def deck_update(request, deckId):
                     status=status.HTTP_200_OK)
             else:
                 return JsonResponse({'success': False,
-                                     'message':
+                                     'error':
                                      ['Não foi possivel validar os dados']},
                                     status=status.HTTP_400_BAD_REQUEST)
         except exceptions.NotFound:
             return JsonResponse({'success': False,
-                                'message': ['Usuario não localizado']},
+                                'error': ['Usuario não localizado']},
                                 status=status.HTTP_400_BAD_REQUEST)
     else:
         return JsonResponse({"success": False,
-                             "message": ["Metodo não autorizado"]},
+                             "error": ["Metodo não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
@@ -509,7 +509,7 @@ def delete_deck(request, deckId):
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'message': ['Token de autorização ausente. Faça login novamente.']
+                    'error': ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             # Função de validação do JWT
@@ -518,19 +518,19 @@ def delete_deck(request, deckId):
 
             if not user_id:
                 return JsonResponse({'success': False,
-                                     'message': ['userId é necessário']},
+                                     'error': ['userId é necessário']},
                                     status=status.HTTP_400_BAD_REQUEST)
             deck_user = UserDeck.objects.filter(
                 deck_id=deck_id, user_id=user_id)
             if not deck_user:
                 return JsonResponse({'success': False,
-                                     'message': ['Deck não encontrado para este usuário']},
+                                     'error': ['Deck não encontrado para este usuário']},
                                     status=status.HTTP_404_NOT_FOUND)
             # Busca o Deck completo usando o ID
             deck = Deck.objects.filter(id=deck_id).first()
             if not deck:
                 return JsonResponse({'success': False,
-                                     'message': ['Deck não encontrado para este usuário']},
+                                     'error': ['Deck não encontrado para este usuário']},
                                     status=status.HTTP_404_NOT_FOUND)
             
             # Agora, antes de deletar o deck, deletar todos os flashcards associados ao deck
@@ -563,11 +563,11 @@ def delete_deck(request, deckId):
             })
         except exceptions.NotFound:
             return JsonResponse({'success': False,
-                                 'message': ['Usuário não encontrado']},
+                                 'error': ['Usuário não encontrado']},
                                 status=status.HTTP_400_BAD_REQUEST)
     else:
         return JsonResponse({"success": False,
-                             "message": ["Método não autorizado"]},
+                             "error": ["Método não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
@@ -581,7 +581,7 @@ def add_deck_to_user(request, deckId):
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'message':
+                    'error':
                     ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -590,12 +590,12 @@ def add_deck_to_user(request, deckId):
 
             if not deck_id:
                 return JsonResponse({'success': False,
-                                    'message': ['Deck não encontrado.']},
+                                    'error': ['Deck não encontrado.']},
                                     status=status.HTTP_404_NOT_FOUND)
 
             if UserDeck.objects.filter(user_id=user_id, deck_id=deck_id).exists():
                 return JsonResponse({"success": False,
-                                    "message": ["Deck já pertence ao usuário."]},
+                                    "error": ["Deck já pertence ao usuário."]},
                                     status=status.HTTP_409_CONFLICT)
 
             standard_deck = Deck.objects.get(Q(id=deck_id) & (
@@ -606,7 +606,7 @@ def add_deck_to_user(request, deckId):
 
             if user_standard_deck is None:
                 return JsonResponse({"success": False,
-                                    "message": ["Erro ao adicionar deck"]},
+                                    "error": ["Erro ao adicionar deck"]},
                                     status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             # Adicionando flashcards do deck para o usuário
@@ -624,11 +624,11 @@ def add_deck_to_user(request, deckId):
 
         except Deck.DoesNotExist:
             return JsonResponse({'success': False,
-                                'message': ['Deck não encontrado.']},
+                                'error': ['Deck não encontrado.']},
                                 status=status.HTTP_404_NOT_FOUND)
     else:
         return JsonResponse({"success": False,
-                             "message": ["Metodo não autorizado"]},
+                             "error": ["Metodo não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
