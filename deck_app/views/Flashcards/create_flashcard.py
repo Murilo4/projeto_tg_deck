@@ -48,8 +48,7 @@ def generate_audio_filename(keyword, country, sex, voice_name):
         " ", "_")  # Nome da voz sem espaços
 
     # Gerar o nome do arquivo
-    filename = f"{formatted_keyword}_{formatted_country}_{
-        formatted_sex}_{formatted_voice_name}.mp3"
+    filename = f"{formatted_keyword}_{formatted_country}_{formatted_sex}_{formatted_voice_name}.mp3"
     return filename
 
 
