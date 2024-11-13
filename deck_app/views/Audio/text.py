@@ -5,6 +5,7 @@ from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from reverso_api.context import ReversoContextAPI
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework import status
 
 
 @csrf_exempt
@@ -14,7 +15,7 @@ def get_correct_word(request):
 
     if not word:
         return JsonResponse({'success': False,
-                             'message': 'Texto é obrigatório.'})
+                             'error': 'Texto é obrigatório.'})
 
     try:
         blob = Word(word)
@@ -25,9 +26,11 @@ def get_correct_word(request):
         else:
             corrected_text = blob.spellcheck()
             return JsonResponse({'success': True,
-                                 'corrected_text': corrected_text})
+                                 'correctedText': corrected_text})
     except Exception as e:
-        return JsonResponse({'success': False, 'message': f"Erro: {str(e)}"})
+        return JsonResponse({'success': False,
+                             'error': f"Erro: {str(e)}"},
+                            status=status.HTTP_404_NOT_FOUND)
 
 
 HEADERS = {
@@ -49,9 +52,13 @@ def get_correct_phrase(request):
             return JsonResponse({'original_text': phrase,
                                  'corrected_text': corrected_text})
         else:
-            return JsonResponse({'error': 'No text provided'}, status=400)
+            return JsonResponse({'success': False,
+                                'error': 'Nenhum texto fornecido'},
+                                status=status.HTTP_400_BAD_REQUEST)
 
-    return JsonResponse({'error': 'Invalid request method'}, status=400)
+    return JsonResponse({'success': False,
+                        'error': 'Método invalido'},
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 def correct_phrases(phrase):
@@ -85,7 +92,8 @@ def get_translated_word(request):
 
             if not word:
                 return JsonResponse({'success': False,
-                                     'message': 'A palavra é obrigatória.'})
+                                     'error': 'A palavra é obrigatória.'},
+                                    status=status.HTTP_404_NOT_FOUND)
 
             # Inicializa a API ReversoContextAPI
             api = ReversoContextAPI(word, "", source_lang, target_lang)
@@ -98,16 +106,18 @@ def get_translated_word(request):
 
             if response.status_code != 200:
                 return JsonResponse({'success': False,
-                                     'message':
-                                     f"Erro na requisição: {response.status_code}"})
+                                     'error':
+                                     f"Erro na requisição: {response.status_code}"},
+                                    status=status.HTTP_404_NOT_FOUND)
 
             try:
                 translations_json = response.json().get(
                     "dictionary_entry_list", [])
             except ValueError:
                 return JsonResponse({'success': False,
-                                     'message':
-                                     "Resposta JSON inválida ou vazia."})
+                                     'error':
+                                     "Resposta JSON inválida ou vazia."},
+                                    status=status.HTTP_404_NOT_FOUND)
 
             # Processa traduções se houver
             translations = []
@@ -119,12 +129,14 @@ def get_translated_word(request):
             translations = translations[:8]
             return JsonResponse({'success': True,
                                  "message": "Palavra traduzida",
-                                "translations": translations})
+                                "translations": translations},
+                                status=status.HTTP_200_OK)
 
         except Exception as e:
             return JsonResponse({'success': False,
-                                 'message':
-                                 f"Erro ao buscar traduções: {str(e)}"})
+                                 'error':
+                                 f"Erro ao buscar traduções: {str(e)}"},
+                                status=status.HTTP_404_NOT_FOUND)
 
 
 @api_view(['POST'])
@@ -137,7 +149,8 @@ def get_example_sentences(request):
 
             if not word:
                 return JsonResponse({'success': False,
-                                     'message': 'A palavra é obrigatória.'})
+                                     'error': 'A palavra é obrigatória.'},
+                                    status=status.HTTP_400_BAD_REQUEST)
 
             # Inicializa a API ReversoContextAPI
             api = ReversoContextAPI(word, "", source_lang, target_lang)
@@ -149,8 +162,9 @@ def get_example_sentences(request):
 
             if response.status_code != 200:
                 return JsonResponse({'success': False,
-                                     'message':
-                                     f"Erro na requisição: {response.status_code}"})
+                                     'error':
+                                     f"Erro na requisição: {response.status_code}"},
+                                    status=status.HTTP_404_NOT_FOUND)
 
             # Tenta carregar o conteúdo JSON
             try:
@@ -158,8 +172,9 @@ def get_example_sentences(request):
                 examples_json = response.json().get("list", [])
             except ValueError:
                 return JsonResponse({'success': False,
-                                     'message':
-                                     "Resposta JSON inválida ou vazia."})
+                                     'error':
+                                     "Resposta JSON inválida ou vazia."},
+                                    status=status.HTTP_404_NOT_FOUND)
 
             # Processa exemplos se houver
             examples = []
@@ -169,7 +184,7 @@ def get_example_sentences(request):
                 })
 
             if not examples:
-                return JsonResponse({'success': True, 
+                return JsonResponse({'success': False,
                                      'message': "Nenhum exemplo encontrado.",
                                      "examples": []})
 
@@ -179,6 +194,6 @@ def get_example_sentences(request):
                                  "examples": examples})
 
         except Exception as e:
-            print("Erro ao buscar frases:", e)
             return JsonResponse({'success': False,
-                                 'message': f"Erro ao buscar frases: {str(e)}"})
+                                 'error': f"Erro ao buscar frases: {str(e)}"},
+                                status=status.HTTP_404_NOT_FOUND)
