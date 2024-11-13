@@ -42,9 +42,9 @@ def get_all_decks(request, page_number):
             order_by = request.GET.get('orderBy', None)
             min_flashcards = request.GET.get('minFlashcards', None)
             max_flashcards = request.GET.get('maxFlashcards', None)
-            favorite_filter = request.GET.get('favorite', None)
+            favorite_filter = request.GET.get('favorites', None)
             learning_filter = request.GET.get('learning', None)
-            reviewing_filter = request.GET.get('reviewing', None)
+            reviewing_filter = request.GET.get('finished', None)
 
             # Busca UserStandardDeck para o usuário
             user_decks = UserDeck.objects.filter(user_id=user_id).values_list(
@@ -89,13 +89,17 @@ def get_all_decks(request, page_number):
 
             decks = decks.filter(id__in=filtered_deck_ids)
 
-            if order_by == 'newest':
+            decks = decks.annotate(
+                flashcard_count=Count('deckflashcard'))
+
+            # Adicionar a ordenação por flashcards aqui
+            if order_by == 'newer':
                 decks = decks.order_by('-created_at')
-            elif order_by == 'oldest':
+            elif order_by == 'older':
                 decks = decks.order_by('created_at')
-            elif order_by == 'recentlyModified':
+            elif order_by == 'lastModifications':
                 decks = decks.order_by('-updated_at')
-            elif order_by == 'lastTime':
+            elif order_by == 'lastStudied':
                 user_flashcards = UserFlashCard.objects.filter(
                     user_id=user_id).values(
                         'deck_flashcard__deck_id').annotate(
@@ -103,6 +107,9 @@ def get_all_decks(request, page_number):
                 recent_deck_ids = [
                     uf['deck_flashcard__deck_id'] for uf in user_flashcards]
                 decks = decks.filter(id__in=recent_deck_ids)
+            elif order_by == 'flashcards':
+                # Ordenação pela contagem de flashcards (decks com mais flashcards)
+                decks = decks.order_by('-flashcard_count')
 
             paginator = Paginator(decks, 10)
             page_obj = paginator.get_page(page_number)

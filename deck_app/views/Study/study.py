@@ -13,57 +13,99 @@ from ...serializers_flashcard import FlashCardGetSerializer
 
 
 @api_view(["POST"])
-def rate_flashcard(user_flashcard, rating):
-    # Atualiza o feedback_score e chama a função para atualizar a prioridade
-    user_flashcard.feedback_score = rating
-    user_flashcard.save()  # Salva o feedback
+def study_flashcard(request, deck_flashcard_id, user_id, star_rating):
+    try:
+        user_flashcard = UserFlashCard.objects.get(
+                deck_flashcard_id=deck_flashcard_id,
+                user_id=user_id
+            )
 
-    # Atualiza a prioridade com base no novo feedback
-    update_flashcard_priority(user_flashcard)
+        # Atualiza o campo de estrela com base no feedback do usuário
+        if star_rating == 1:
+            user_flashcard.one_star += 1
+        elif star_rating == 2:
+            user_flashcard.two_stars += 1
+        elif star_rating == 3:
+            user_flashcard.three_stars += 1
+        elif star_rating == 4:
+            user_flashcard.four_stars += 1
+        elif star_rating == 5:
+            user_flashcard.five_stars += 1
 
+        # Atualiza o último feedback e a última vez estudado
+        user_flashcard.last_feedback = star_rating
+        user_flashcard.last_time = timezone.now()
 
-def update_flashcard_priority(deck_flashcard_id, user_id):
-    # Busca o UserFlashCard correspondente
-    user_flashcard = UserFlashCard.objects.get(
-        deck_flashcard_id=deck_flashcard_id,
-        user_id=user_id
-    )
+        # Calcula o número total de exibições somando as avaliações
+        total_exhibitions = (
+            user_flashcard.one_star +
+            user_flashcard.two_stars +
+            user_flashcard.three_stars +
+            user_flashcard.four_stars +
+            user_flashcard.five_stars
+        )
 
-    # Coleta todos os feedbacks (estrelas) do usuário para o flashcard
-    feedbacks = UserFlashCard.objects.filter(
-        deck_flashcard_id=deck_flashcard_id,
-        user_id=user_id
-    ).order_by('-last_time')
+        if user_flashcard.situation == "New" and total_exhibitions >= 1:
+            user_flashcard.situation = "Learning"
+        elif user_flashcard.situation == "Learning" and total_exhibitions >= 5:
+            user_flashcard.situation = "Reviewing"
+        
+        # Salva as alterações no banco de dados
+        user_flashcard.save()
 
-    total_weight = 0
-    total_score = 0
+        weights = {
+            1: 5,
+            2: 4,
+            3: 3,
+            4: 2,
+            5: 1
+        }
 
-    if feedbacks.exists():
-        # Adiciona o feedback mais recente com peso maior
-        recent_feedback = feedbacks.first()
-        if recent_feedback.last_feedback is not None:
-            total_weight += 2  # Peso maior para o feedback mais recente
-            total_score += recent_feedback.last_feedback * 2
+        # Calcula a pontuação ponderada
+        total_weighted_score = (
+            user_flashcard.one_star * weights[1] +
+            user_flashcard.two_stars * weights[2] +
+            user_flashcard.three_stars * weights[3] +
+            user_flashcard.four_stars * weights[4] +
+            user_flashcard.five_stars * weights[5]
+        )
 
-        # Adiciona os feedbacks anteriores
-        for feedback in feedbacks[1:]:  # Ignora o feedback mais recente
-            if feedback.last_feedback is not None:
-                total_weight += 1  # Peso normal
-                total_score += feedback.last_feedback
+        last_feedback_weight = weights.get(user_flashcard.last_feedback, 0)
+        total_weighted_score += last_feedback_weight * 2
 
-    # Calcula a nova média ponderada
-    if total_weight > 0:
-        new_average = total_score / total_weight
-    else:
-        new_average = 3.0  # Valor padrão se não houver feedbacks
+        # Calcula a média ponderada da prioridade
+        total_counts = total_exhibitions + 2
+        if total_counts > 0:
+            new_priority = total_weighted_score / total_counts
+        else:
+            new_priority = 3.0  # Valor padrão se não houver feedbacks
 
-    # Atualiza ou cria a prioridade no FlashCardPriority
-    flashcard_priority, created = FlashCardPriority.objects.get_or_create(
-        deck_flashcard_id=deck_flashcard_id,
-        user_id=user_id
-    )
-    flashcard_priority.priority = new_average
-    flashcard_priority.save()
+        # Atualiza ou cria a prioridade no FlashCardPriority
+        flashcard_priority, created = FlashCardPriority.objects.get_or_create(
+            deck_flashcard_id=deck_flashcard_id,
+            user_id=user_id
+        )
+        flashcard_priority.priority = new_priority
+        flashcard_priority.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Estado do flashcard e prioridade atualizados com sucesso.',
+            'new_situation': user_flashcard.situation,
+            'new_priority': new_priority
+        }, status=status.HTTP_200_OK)
+
+    except UserFlashCard.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Flashcard do usuário não encontrado.'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
