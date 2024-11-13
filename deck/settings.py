@@ -42,7 +42,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 ]
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+CORS_ALLOW_HEADERS = [
+    'jwt_token',
+    'Authorization',
+    'session',
+    'Content-Type'
+]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -64,6 +69,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://flashvibe.onrender.com",
     "https://projeto-tg-back-end.onrender.com"
 ]
+
 FIREBASE_CREDENTIALS_PATH = os.path.join('./firebase.json')
 # # HSTS (HTTP Strict Transport Security)
 SECURE_HSTS_SECONDS = 3600  # 1 hora
@@ -99,7 +105,23 @@ CACHES = {
 
 WSGI_APPLICATION = 'deck.wsgi.application'
 
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'https://localhost:3000',
+    "http://localhost:8001",
+    "https://flashvibe.vercel.app",
+    "https://projeto-tg-back-end.onrender.com",
+    "https://flashvibe.onrender.com"
+]
 
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:8000",
+    "http://localhost:8001",
+    "https://flashvibe.vercel.app",
+    "https://projeto-tg-back-end.onrender.com",
+    "https://flashvibe.onrender.com"
+]
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 

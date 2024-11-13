@@ -21,7 +21,6 @@ from ..Flashcards.flashcard_management import delete_flashcard
 def get_all_decks(request, page_number):
     if request.method == 'GET':
         try:
-            validate_session()
 
             token = request.headers.get('Authorization')
             if not token:

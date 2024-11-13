@@ -82,16 +82,16 @@ class PersonDeckGetSerializer(serializers.ModelSerializer):
         return DeckFlashCard.objects.filter(deck=obj).count()
 
     def get_lastModification(self, obj):
-        # Calcula a diferença de dias entre 'updated_at' e o tempo atual
-        # Considera o timezone do 'updated_at'
-        now = datetime.now(obj.updated_at.tzinfo)
-        delta = now - obj.updated_at
-        return delta.days
+    # Calcula a diferença em milissegundos desde o Unix epoch (1970-01-01)
+        epoch = datetime(1970, 1, 1, tzinfo=obj.updated_at.tzinfo)
+        delta = obj.updated_at - epoch
+        return int(delta.total_seconds() * 1000)
 
     def get_createdData(self, obj):
-        now = datetime.now(obj.created_at.tzinfo)
-        delta = now - obj.created_at
-        return delta.days
+        # Calcula a diferença em milissegundos desde o Unix epoch (1970-01-01)
+        epoch = datetime(1970, 1, 1, tzinfo=obj.created_at.tzinfo)
+        delta = obj.created_at - epoch
+        return int(delta.total_seconds() * 1000)
 
     def get_last_study_time(self, obj):
         user_id = self.context.get('user_id')
