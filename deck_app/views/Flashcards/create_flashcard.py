@@ -91,7 +91,7 @@ def create_flashcard(request, deckId):
                                      "error": "Frase não encontrada"},
                                     status=status.HTTP_400_BAD_REQUEST)
             validate_session()
-            token = request.data.get('Authorization')
+            token = request.headers.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,

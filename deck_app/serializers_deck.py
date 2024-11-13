@@ -59,7 +59,7 @@ class PersonDeckGetSerializer(serializers.ModelSerializer):
     createdData = serializers.SerializerMethodField()
     favorite = serializers.SerializerMethodField()
     flashcards = serializers.SerializerMethodField()
-    last_time = serializers.SerializerMethodField()
+    lastTime = serializers.SerializerMethodField()
 
     class Meta:
         model = Deck
@@ -68,7 +68,7 @@ class PersonDeckGetSerializer(serializers.ModelSerializer):
             'image', 'lastModification', 'createdData',
             'description', 'public', 'difficult', 'stars',
             'reviews', 'favorite', 'flashcards',
-            'last_time'
+            'lastTime'
         )
 
     def get_last_time(self, obj):

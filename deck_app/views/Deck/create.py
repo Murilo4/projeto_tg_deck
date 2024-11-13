@@ -16,7 +16,7 @@ def create_deck(request):
         try:
             validate_session()
 
-            token = request.data.get('Authorization')
+            token = request.headers.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,

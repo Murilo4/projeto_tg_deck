@@ -23,7 +23,7 @@ def get_all_decks(request, page_number):
         try:
             validate_session()
 
-            token = request.data.get('Authorization')
+            token = request.headers.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -186,38 +186,40 @@ def get_all_decks(request, page_number):
 def get_all_decks_to_user(request, userId):
     if request.method == 'GET':
         try:
-            if request.method == 'GET':
-                user_id = userId
-                if not user_id:
-                    return JsonResponse({
-                        "success": False,
-                        "error": ["Token inválido"]
-                    }, status=status.HTTP_401_UNAUTHORIZED)
-
-                if not user_id:
-                    return JsonResponse({
-                        "success": False,
-                        "error": ["Usuário não autorizado a visualizar esses decks."]
-                    }, status=status.HTTP_403_FORBIDDEN)
-
-                # Buscar todos os decks relacionados ao usuário
-                decks = Deck.objects.filter(user_id=user_id)
-
-                # Se não encontrar nenhum deck
-                if not decks.exists():
-                    return JsonResponse({
-                        "success": False,
-                        "error": ["Nenhum deck encontrado para este usuário."]
-                    }, status=status.HTTP_404_NOT_FOUND)
-
-                # Serializa os decks encontrados
-                serializer = PersonDeckGetSerializer(decks, many=True)
-
-                # Retorna a lista de decks
+            token = request.headers.get('Authorization')
+            if not token:
                 return JsonResponse({
-                    "success": True,
-                    "decks": serializer.data
-                }, status=status.HTTP_200_OK)
+                    'success': False,
+                    'message':
+                    ['Token de autorização ausente. Faça login novamente.']
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
+            jwt_data = validate_jwt(token)
+            user_id = jwt_data.get('id')
+            if not user_id:
+                return JsonResponse({
+                    "success": False,
+                    "error": ["Token inválido"]
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
+            # Buscar todos os decks relacionados ao usuário
+            decks = Deck.objects.filter(user_id=user_id)
+
+            # Se não encontrar nenhum deck
+            if not decks.exists():
+                return JsonResponse({
+                    "success": False,
+                    "error": ["Nenhum deck encontrado para este usuário."]
+                }, status=status.HTTP_404_NOT_FOUND)
+
+            # Serializa os decks encontrados
+            serializer = PersonDeckGetSerializer(decks, many=True)
+
+            # Retorna a lista de decks
+            return JsonResponse({
+                "success": True,
+                "decks": serializer.data
+            }, status=status.HTTP_200_OK)
 
         except Exception as e:
             return JsonResponse({
@@ -232,7 +234,7 @@ def get_standard_decks(request, page_number):
     if request.method == 'GET':
         try:
 
-            token = request.data.get('Authorization')
+            token = request.headers.get('Authorization')
 
             if not token:
                 return JsonResponse({
@@ -355,7 +357,7 @@ def get_deck(request, deckId):
         try:
             validate_session()
 
-            token = request.data.get('Authorization')
+            token = request.headers.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -416,7 +418,7 @@ def deck_update(request, deckId):
             deck_id = deckId
             validate_session()
 
-            token = request.data.get('Authorization')
+            token = request.headers.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -505,7 +507,7 @@ def delete_deck(request, deckId):
             deck_id = deckId
             validate_session()
 
-            token = request.data.get('Authorization')
+            token = request.headers.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -577,7 +579,7 @@ def add_deck_to_user(request, deckId):
     if request.method == 'POST':
         deck_id = deckId
         try:
-            token = request.data.get('Authorization')
+            token = request.headers.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,
