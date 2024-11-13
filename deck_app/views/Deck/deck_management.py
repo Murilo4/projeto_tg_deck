@@ -141,10 +141,10 @@ def get_all_decks(request, page_number):
                     **serialized_deck,
                     'situation': user_flashcard.situation if user_flashcard else None,
                     'flashcards': flashcard_count,
-                    'new': user_preferences.new_per_day if user_preferences else None,
-                    'learning': user_preferences.learning_per_day if user_preferences else None,
-                    'reviewing': user_preferences.review_per_day if user_preferences else None,
-                    'favorite': user_deck.favorite if user_deck else None,
+                    'new': user_preferences.new_per_day if user_preferences else 0,
+                    'learning': user_preferences.learning_per_day if user_preferences else 0,
+                    'reviewing': user_preferences.review_per_day if user_preferences else 0,
+                    'favorite': user_deck.favorite if user_deck else 0,
                     'stars': (
                         (user_flashcard.one_star or 0) |
                         (user_flashcard.two_stars or 0) |
