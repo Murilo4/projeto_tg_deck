@@ -15,24 +15,11 @@ from ...validation.validation_session import validate_session
 from ...models import Example, Translation
 import requests
 from firebase_admin import storage
-import firebase_admin
-from firebase_admin import credentials, initialize_app
-from django.conf import settings
-import os
+# import firebase_admin
+# from firebase_admin import credentials, initialize_app
+# from django.conf import settings
+# import os
 import io
-
-
-def initialize_firebase():
-    cred_path = settings.FIREBASE_CREDENTIALS_PATH
-    if not firebase_admin._apps:
-        cred = credentials.Certificate(cred_path)
-        firebase_admin.initialize_app(cred, {
-            'storageBucket': "flashvibe-13cf5.appspot.com"
-        })
-        initialize_app(cred)
-
-
-initialize_firebase()
 
 
 def generate_audio_filename(
