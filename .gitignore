@@ -7,4 +7,3 @@ __pycache__/
 .vscode
 env/lib/flake8
 firebase.json
-firebase.py
