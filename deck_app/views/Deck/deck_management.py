@@ -161,7 +161,7 @@ def get_all_decks(request, page_number):
 
             if response_data == []:
                 return JsonResponse({"success": False,
-                                    'message': ['Não foi possível encontrar decks.']},
+                                    'error': ['Não foi possível encontrar decks.']},
                                     status=status.HTTP_404_NOT_FOUND)
             return JsonResponse({
                 'success': True,
@@ -176,14 +176,14 @@ def get_all_decks(request, page_number):
             })
         except exceptions.NotFound:
             return JsonResponse({'success': False,
-                                 'message': ['Usuários não encontrados']},
+                                 'error': ['Usuários não encontrados']},
                                 status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Erro: {str(e)}'},
+            return JsonResponse({'success': False, 'error': f'Erro: {str(e)}'},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
         return JsonResponse({"success": False,
-                             "message": ["Metodo não autorizado"]},
+                             "error": ["Metodo não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 @csrf_exempt
@@ -195,7 +195,7 @@ def get_all_decks_to_user(request, userId):
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'message':
+                    'error':
                     ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
@@ -249,7 +249,7 @@ def get_standard_decks(request, page_number):
             user_id = jwt_data.get('id')
             if not user_id:
                 return JsonResponse({'success': False,
-                                     'message': ['userId é necessário']},
+                                     'error': ['userId é necessário']},
                                     status=status.HTTP_400_BAD_REQUEST)
 
             # IDs dos decks que o usuário já possui
@@ -318,7 +318,7 @@ def get_standard_decks(request, page_number):
 
             if not response_data:
                 return JsonResponse({"success": False,
-                                     'message': ['Não foi possível encontrar decks.']},
+                                     'error': ['Não foi possível encontrar decks.']},
                                     status=status.HTTP_404_NOT_FOUND)
 
             return JsonResponse({
@@ -335,15 +335,15 @@ def get_standard_decks(request, page_number):
 
         except exceptions.NotFound:
             return JsonResponse({'success': False,
-                                 'message': ['Usuários não encontrados']},
+                                 'error': ['Usuários não encontrados']},
                                 status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return JsonResponse({'success': False,
-                                 'message': f'Erro: {str(e)}'},
+                                 'error': f'Erro: {str(e)}'},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
         return JsonResponse({"success": False,
-                             "message": ["Metodo não autorizado"]},
+                             "error": ["Metodo não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
