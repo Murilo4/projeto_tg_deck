@@ -71,7 +71,7 @@ class PersonDeckGetSerializer(serializers.ModelSerializer):
             'lastTime'
         )
 
-    def get_last_time(self, obj):
+    def get_lastTime(self, obj):
         # Aqui você busca o último UserFlashCard relacionado
         last_time_entry = UserFlashCard.objects.filter(
             deck_flashcard__deck=obj).order_by('-last_time').first()

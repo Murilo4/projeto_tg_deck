@@ -186,6 +186,7 @@ def get_all_decks(request, page_number):
                              "error": ["Metodo não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
+
 @csrf_exempt
 @api_view(['GET'])
 def get_all_decks_to_user(request, userId):
@@ -583,6 +584,7 @@ def add_deck_to_user(request, deckId):
         deck_id = deckId
         try:
             token = request.headers.get('Authorization')
+            print(token)
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -591,7 +593,9 @@ def add_deck_to_user(request, deckId):
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             jwt_data = validate_jwt(token)
+            print(jwt_data)
             user_id = jwt_data.get('id')
+            print(user_id)
 
             if not deck_id:
                 return JsonResponse({'success': False,

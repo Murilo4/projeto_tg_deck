@@ -8,7 +8,6 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from ...validation.validation_jwt import validate_jwt
-from ...validation.validation_session import validate_session
 from ...serializers_flashcard import FlashCardGetSerializer
 
 
