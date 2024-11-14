@@ -280,7 +280,7 @@ def get_standard_decks(request, page_number):
             if max_reviews is not None:
                 standard_decks = standard_decks.filter(reviews__lte=int(max_reviews))
             if difficulty:
-                standard_decks = standard_decks.filter(difficult=difficulty)
+                standard_decks = standard_decks.filter(difficult__in=difficulty)
 
             # Anotação de contagem de flashcards
             standard_decks = standard_decks.annotate(flashcard_count=Count('deckflashcard'))
