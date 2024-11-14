@@ -259,7 +259,7 @@ def get_standard_decks(request, page_number):
             
 
             # Filtros da query
-            difficulty = request.GET.get('difficulty', None)
+            difficulty = request.GET.getlist('difficulty', None)
             order_by = request.GET.get('orderBy', None)
             min_reviews = request.GET.get('minReviews', None)
             max_reviews = request.GET.get('maxReviews', None)
