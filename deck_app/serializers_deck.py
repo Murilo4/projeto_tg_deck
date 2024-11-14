@@ -126,16 +126,14 @@ class PersonDeckGetStandardSerializer(serializers.ModelSerializer):
         )
 
     def get_lastModification(self, obj):
-        # Calcula a diferença de dias entre 'updated_at' e o tempo atual
-        # Considera o timezone do 'updated_at'
-        now = datetime.now(obj.updated_at.tzinfo)
-        delta = now - obj.updated_at
-        return delta.days
+        epoch = datetime(1970, 1, 1, tzinfo=obj.updated_at.tzinfo)
+        delta = obj.updated_at - epoch
+        return int(delta.total_seconds() * 1000)
 
     def get_createdData(self, obj):
-        now = datetime.now(obj.created_at.tzinfo)
-        delta = now - obj.created_at
-        return delta.days
+        epoch = datetime(1970, 1, 1, tzinfo=obj.created_at.tzinfo)
+        delta = obj.created_at - epoch
+        return int(delta.total_seconds() * 1000)
 
 
 class CreateStandardDecks(serializers.ModelSerializer):
