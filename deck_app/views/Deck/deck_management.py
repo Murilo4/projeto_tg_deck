@@ -255,6 +255,10 @@ def get_standard_decks(request, page_number):
             # IDs dos decks que o usuário já possui
             user_decks = UserDeck.objects.filter(
                 user_id=user_id).values_list('deck_id', flat=True)
+            
+            has_decks = True
+            if not user_decks:
+                has_decks = False
 
             # Filtros da query
             difficulty = request.GET.get('difficulty', None)
@@ -318,7 +322,8 @@ def get_standard_decks(request, page_number):
 
             if not response_data:
                 return JsonResponse({"success": False,
-                                     'error': ['Não foi possível encontrar decks.']},
+                                     'error': ['Não foi possível encontrar decks.'],
+                                     'hasAllDecks': has_decks},
                                     status=status.HTTP_404_NOT_FOUND)
 
             return JsonResponse({
