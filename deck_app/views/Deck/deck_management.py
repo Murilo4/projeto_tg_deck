@@ -257,7 +257,7 @@ def get_standard_decks(request, page_number):
                 user_id=user_id).values_list('deck_id', flat=True)
 
             # Filtros da query
-            difficult = request.GET.get('difficult', None)
+            difficulty = request.GET.get('difficulty', None)
             order_by = request.GET.get('orderBy', None)
             min_reviews = request.GET.get('minReviews', None)
             max_reviews = request.GET.get('maxReviews', None)
@@ -275,8 +275,8 @@ def get_standard_decks(request, page_number):
                 standard_decks = standard_decks.filter(reviews__gte=int(min_reviews))
             if max_reviews is not None:
                 standard_decks = standard_decks.filter(reviews__lte=int(max_reviews))
-            if difficult:
-                standard_decks = standard_decks.filter(difficult=difficult)
+            if difficulty:
+                standard_decks = standard_decks.filter(difficult=difficulty)
 
             # Anotação de contagem de flashcards
             standard_decks = standard_decks.annotate(flashcard_count=Count('deckflashcard'))
@@ -288,7 +288,7 @@ def get_standard_decks(request, page_number):
                 standard_decks = standard_decks.order_by('created_at')
             elif order_by == 'recentlyModified':
                 standard_decks = standard_decks.order_by('-updated_at')
-            elif order_by == 'bestRating':
+            elif order_by == 'feedback':
                 standard_decks = standard_decks.order_by('-stars')
             elif order_by == 'flashcard':
                 standard_decks = standard_decks.order_by('-flashcard_count')
