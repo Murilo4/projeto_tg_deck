@@ -256,9 +256,7 @@ def get_standard_decks(request, page_number):
             user_decks = UserDeck.objects.filter(
                 user_id=user_id).values_list('deck_id', flat=True)
             
-            has_decks = True
-            if not user_decks:
-                has_decks = False
+            
 
             # Filtros da query
             difficulty = request.GET.get('difficulty', None)
@@ -269,6 +267,8 @@ def get_standard_decks(request, page_number):
 
             # Filtrar os decks padrão que não estão nos decks do usuário
             standard_decks = Deck.objects.filter(type_deck='Standard').exclude(id__in=user_decks)
+
+            has_decks = not standard_decks
 
             # Filtro por termo de pesquisa no título
             if search_term:
