@@ -145,13 +145,6 @@ def get_all_decks(request, page_number):
                     'learning': user_preferences.learning_per_day if user_preferences else 0,
                     'reviewing': user_preferences.review_per_day if user_preferences else 0,
                     'favorite': user_deck.favorite if user_deck else 0,
-                    'stars': (
-                        (user_flashcard.one_star or 0) |
-                        (user_flashcard.two_stars or 0) |
-                        (user_flashcard.three_stars or 0) |
-                        (user_flashcard.four_stars or 0) |
-                        (user_flashcard.five_stars or 0)
-                    ) if user_flashcard else 0
                 })
 
             flashcard_min = min(

@@ -59,7 +59,6 @@ class PersonDeckGetSerializer(serializers.ModelSerializer):
     createdData = serializers.SerializerMethodField()
     favorite = serializers.SerializerMethodField()
     flashcards = serializers.SerializerMethodField()
-    lastTime = serializers.SerializerMethodField()
 
     class Meta:
         model = Deck
@@ -67,15 +66,8 @@ class PersonDeckGetSerializer(serializers.ModelSerializer):
             'id', 'type', 'colorPredefinition', 'title',
             'image', 'lastModification', 'createdData',
             'description', 'public', 'difficult', 'stars',
-            'reviews', 'favorite', 'flashcards',
-            'lastTime'
+            'reviews', 'favorite', 'flashcards'
         )
-
-    def get_lastTime(self, obj):
-        # Aqui você busca o último UserFlashCard relacionado
-        last_time_entry = UserFlashCard.objects.filter(
-            deck_flashcard__deck=obj).order_by('-last_time').first()
-        return last_time_entry.last_time if last_time_entry else None
 
     def get_flashcards(self, obj):
         # Corrige a relação para contar o número de flashcards associados ao deck
