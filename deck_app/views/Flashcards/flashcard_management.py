@@ -41,9 +41,13 @@ def get_all_flashcard(request, page_number, deckId):
 
             if not user_id:
                 return JsonResponse({'success': False,
-                                    'error': ['userId é necessário']},
+                                     'error': ['userId é necessário']},
                                     status=status.HTTP_400_BAD_REQUEST)
 
+            # Obter o parâmetro de pesquisa
+            search = request.GET.get('search', None)
+
+            # Outros parâmetros de filtragem e ordenação
             order_by = request.GET.get('orderBy', None)
             new = request.GET.get('New', None)
             learning = request.GET.get('Learning', None)
@@ -51,12 +55,17 @@ def get_all_flashcard(request, page_number, deckId):
             most_reviewed = request.GET.get('MostReviewed', None)
             least_reviewed = request.GET.get('LeastReviewed', None)
 
-            # Busca UserStandardDeck para o usuário
+            # Obter IDs de flashcards do deck específico
             deck_flashcard_ids = DeckFlashCard.objects.filter(
                 deck_id=deck_id).values_list('flashcard_id', flat=True)
 
             flashcards = FlashCard.objects.filter(id__in=deck_flashcard_ids)
 
+            # Filtrar com base no parâmetro `query` para `main_phrase`
+            if search:
+                flashcards = flashcards.filter(main_phrase__icontains=search)
+
+            # Filtragem adicional com base na situação
             user_flashcards_qs = UserFlashCard.objects.filter(
                 user_id=user_id, deck_flashcard__deck_id=deck_id)
 
@@ -70,11 +79,11 @@ def get_all_flashcard(request, page_number, deckId):
                 user_flashcards_qs = user_flashcards_qs.filter(
                     situation='Reviewing')
 
-            # Filtra os FlashCards que têm UserFlashCards correspondentes
             flashcards = flashcards.filter(
                 id__in=user_flashcards_qs.values_list(
                     'deck_flashcard__flashcard_id', flat=True))
 
+            # Filtragem por número de revisões
             if most_reviewed == 'true':
                 flashcards = flashcards.annotate(
                     total_reviews=F('userflashcard__one_star') +
@@ -92,6 +101,7 @@ def get_all_flashcard(request, page_number, deckId):
                     F('userflashcard__five_stars')
                 ).order_by('total_reviews')
 
+            # Ordenação
             if order_by == 'newest':
                 flashcards = flashcards.order_by('-created_at')
             elif order_by == 'oldest':
@@ -107,13 +117,13 @@ def get_all_flashcard(request, page_number, deckId):
                     uf['deck_flashcard__deck_id'] for uf in user_flashcards]
                 flashcards = flashcards.filter(id__in=recent_deck_ids)
 
+            # Paginação
             paginator = Paginator(flashcards, 10)
             page_obj = paginator.get_page(page_number)
 
             # Formatação da resposta
             response_data = []
             for flashcard in page_obj:
-
                 serializer = FlashCardGetSerializer(flashcard)
                 serialized_flashcard = serializer.data
                 user_flashcard = None
@@ -132,14 +142,14 @@ def get_all_flashcard(request, page_number, deckId):
                 response_data.append({
                     **serialized_flashcard,
                     **serialized_user_flashcard,
-                    'situation':
-                    user_flashcard.situation if user_flashcard else None,
+                    'situation': user_flashcard.situation if user_flashcard else None,
                 })
+
             deck_name = Deck.objects.filter(id=deck_id).first()
-            if response_data == []:
+            if not response_data:
                 return JsonResponse({"success": False,
-                                    'error':
-                                     ['Não foi possível encontrar flashcards.']},
+                                     'error':
+                                    ['Não foi possível encontrar flashcards.']},
                                     status=status.HTTP_404_NOT_FOUND)
 
             return JsonResponse({

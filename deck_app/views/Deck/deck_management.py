@@ -21,13 +21,11 @@ from ..Flashcards.flashcard_management import delete_flashcard
 def get_all_decks(request, page_number):
     if request.method == 'GET':
         try:
-
             token = request.headers.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'message':
-                    ['Token de autorização ausente. Faça login novamente.']
+                    'message': ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             jwt_data = validate_jwt(token)
@@ -38,12 +36,14 @@ def get_all_decks(request, page_number):
                                      'message': ['userId é necessário']},
                                     status=status.HTTP_400_BAD_REQUEST)
 
+            # Parâmetros adicionais para filtros e ordenação
             order_by = request.GET.get('orderBy', None)
             min_flashcards = request.GET.get('minFlashcards', None)
             max_flashcards = request.GET.get('maxFlashcards', None)
             favorite_filter = request.GET.get('favorites', None)
             learning_filter = request.GET.get('learning', None)
             reviewing_filter = request.GET.get('finished', None)
+            search_query = request.GET.get('search', None)  # Parâmetro de pesquisa
 
             # Busca UserStandardDeck para o usuário
             user_decks = UserDeck.objects.filter(user_id=user_id).values_list(
@@ -53,36 +53,38 @@ def get_all_decks(request, page_number):
             # Busca os decks associados
             decks = Deck.objects.filter(id__in=deck_ids)
 
+            # Filtro de busca pelo título do deck (title)
+            if search_query:
+                decks = decks.filter(title__icontains=search_query)
+
+            # Filtros adicionais de favoritos, learning e reviewing
             if favorite_filter == 'true':
                 decks = decks.filter(
                     userdeck__user_id=user_id, userdeck__favorite=True)
             if learning_filter == 'true':
                 decks = decks.filter(
                     userdeck__user_id=user_id, userdeck__learning=True)
-
             if reviewing_filter == 'true':
                 decks = decks.filter(
                     userdeck__user_id=user_id, userdeck__reviewing=True)
+
             # Conta os flashcards em cada deck
             flashcard_counts = DeckFlashCard.objects.values(
-                'deck_id').annotate(
-                flashcard_count=Count('flashcard_id')
+                'deck_id').annotate(flashcard_count=Count('flashcard_id')
             )
 
             # Dicionário para contar flashcards de cada deck
             flashcard_counts_dict = {
-                entry['deck_id']: entry[
-                    'flashcard_count'] for entry in flashcard_counts}
+                entry['deck_id']: entry['flashcard_count'] for entry in flashcard_counts}
 
             flashcard_counts_list = []
 
+            # Filtragem pela quantidade de flashcards
             filtered_deck_ids = []
             for deck in decks:
                 flashcard_count = flashcard_counts_dict.get(deck.id, 0)
-                if ((min_flashcards is None or flashcard_count >= int(
-                    min_flashcards)) and
-                        (max_flashcards is None or flashcard_count <= int(
-                            max_flashcards))):
+                if ((min_flashcards is None or flashcard_count >= int(min_flashcards)) and
+                        (max_flashcards is None or flashcard_count <= int(max_flashcards))):
                     filtered_deck_ids.append(deck.id)
                     flashcard_counts_list.append(flashcard_count)
 
@@ -107,7 +109,6 @@ def get_all_decks(request, page_number):
                     uf['deck_flashcard__deck_id'] for uf in user_flashcards]
                 decks = decks.filter(id__in=recent_deck_ids)
             elif order_by == 'flashcards':
-                # Ordenação pela contagem de flashcards (decks com mais flashcards)
                 decks = decks.order_by('-flashcard_count')
 
             paginator = Paginator(decks, 10)
@@ -160,8 +161,7 @@ def get_all_decks(request, page_number):
 
             if response_data == []:
                 return JsonResponse({"success": False,
-                                    'message':
-                                     ['Não foi possível encontrar decks.']},
+                                    'message': ['Não foi possível encontrar decks.']},
                                     status=status.HTTP_404_NOT_FOUND)
             return JsonResponse({
                 'success': True,
@@ -185,7 +185,6 @@ def get_all_decks(request, page_number):
         return JsonResponse({"success": False,
                              "message": ["Metodo não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
-    
 
 @csrf_exempt
 @api_view(['GET'])
@@ -239,24 +238,21 @@ def get_all_decks_to_user(request, userId):
 def get_standard_decks(request, page_number):
     if request.method == 'GET':
         try:
-
             token = request.headers.get('Authorization')
-
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'error':
-                    ['Token de autorização ausente. Faça login novamente.']
+                    'error': ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             jwt_data = validate_jwt(token)
             user_id = jwt_data.get('id')
-
             if not user_id:
                 return JsonResponse({'success': False,
                                      'message': ['userId é necessário']},
                                     status=status.HTTP_400_BAD_REQUEST)
 
+            # IDs dos decks que o usuário já possui
             user_decks = UserDeck.objects.filter(
                 user_id=user_id).values_list('deck_id', flat=True)
 
@@ -265,25 +261,25 @@ def get_standard_decks(request, page_number):
             order_by = request.GET.get('orderBy', None)
             min_reviews = request.GET.get('minReviews', None)
             max_reviews = request.GET.get('maxReviews', None)
+            search_term = request.GET.get('search', None)  # Novo filtro de pesquisa
 
             # Filtrar os decks padrão que não estão nos decks do usuário
-            standard_decks = Deck.objects.filter(
-                type_deck='Standard').exclude(id__in=user_decks)
+            standard_decks = Deck.objects.filter(type_deck='Standard').exclude(id__in=user_decks)
 
-            # Filtragem de reviews
+            # Filtro por termo de pesquisa no título
+            if search_term:
+                standard_decks = standard_decks.filter(title__icontains=search_term)
+
+            # Filtros adicionais de reviews e dificuldade
             if min_reviews is not None:
-                standard_decks = standard_decks.filter(
-                    reviews__gte=int(min_reviews))
+                standard_decks = standard_decks.filter(reviews__gte=int(min_reviews))
             if max_reviews is not None:
-                standard_decks = standard_decks.filter(
-                    reviews__lte=int(max_reviews))
-
+                standard_decks = standard_decks.filter(reviews__lte=int(max_reviews))
             if difficult:
                 standard_decks = standard_decks.filter(difficult=difficult)
 
             # Anotação de contagem de flashcards
-            standard_decks = standard_decks.annotate(
-                flashcard_count=Count('deckflashcard'))
+            standard_decks = standard_decks.annotate(flashcard_count=Count('deckflashcard'))
 
             # Ordenação conforme especificado
             if order_by == 'newest':
@@ -297,36 +293,32 @@ def get_standard_decks(request, page_number):
             elif order_by == 'flashcard':
                 standard_decks = standard_decks.order_by('-flashcard_count')
 
-            # Paginando os resultados
+            # Paginação dos resultados
             paginator = Paginator(standard_decks, 10)
             page_obj = paginator.get_page(page_number)
 
             # Serialização
-            standard_decks_serializer = PersonDeckGetStandardSerializer(
-                page_obj, many=True)
+            standard_decks_serializer = PersonDeckGetStandardSerializer(page_obj, many=True)
 
-            # Resposta
+            # Construção da resposta
             response_data = []
             reviews_counts_list = []
 
             for index, deck in enumerate(page_obj):
                 reviews_counts_list.append(deck.reviews)
-                flashcard_count = deck.flashcard_count if hasattr(
-                    deck, 'flashcard_count') else 0
+                flashcard_count = deck.flashcard_count if hasattr(deck, 'flashcard_count') else 0
                 response_data.append({
                     **standard_decks_serializer.data[index],
                     'flashcards': flashcard_count
                 })
 
             # Calcular mínimo e máximo de reviews
-            reviews_min = min(
-                reviews_counts_list) if reviews_counts_list else 0
-            reviews_max = max(
-                reviews_counts_list) if reviews_counts_list else 0
+            reviews_min = min(reviews_counts_list) if reviews_counts_list else 0
+            reviews_max = max(reviews_counts_list) if reviews_counts_list else 0
+
             if not response_data:
                 return JsonResponse({"success": False,
-                                     'message':
-                                    ['Não foi possível encontrar decks.']},
+                                     'message': ['Não foi possível encontrar decks.']},
                                     status=status.HTTP_404_NOT_FOUND)
 
             return JsonResponse({
