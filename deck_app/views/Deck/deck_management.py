@@ -43,7 +43,8 @@ def get_all_decks(request, page_number):
             favorite_filter = request.GET.get('favorites', None)
             learning_filter = request.GET.get('learning', None)
             reviewing_filter = request.GET.get('finished', None)
-            search_query = request.GET.get('search', None)  # Parâmetro de pesquisa
+            search_query = request.GET.get('search', None)
+            deck_type_filter = request.GET.get('type', None)
 
             # Busca UserStandardDeck para o usuário
             user_decks = UserDeck.objects.filter(user_id=user_id).values_list(
@@ -67,6 +68,15 @@ def get_all_decks(request, page_number):
             if reviewing_filter == 'true':
                 decks = decks.filter(
                     userdeck__user_id=user_id, userdeck__reviewing=True)
+
+            # Filtro de tipo de deck (Custom ou Standard), padrão é ambos
+            if deck_type_filter:
+                if deck_type_filter not in ['Custom', 'Standard']:
+                    return JsonResponse({
+                        'success': False,
+                        'message': ['Tipo de deck inválido. Use "Custom" ou "Standard".']
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                decks = decks.filter(type_deck=deck_type_filter)
 
             # Conta os flashcards em cada deck
             flashcard_counts = DeckFlashCard.objects.values(
@@ -180,9 +190,10 @@ def get_all_decks(request, page_number):
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
+
 @csrf_exempt
 @api_view(['GET'])
-def get_all_decks_to_user(request, userId):
+def get_all_decks_to_user(request):
     if request.method == 'GET':
         try:
             token = request.headers.get('Authorization')
