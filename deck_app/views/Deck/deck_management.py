@@ -8,7 +8,7 @@ from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from ...models import Deck, UserDeck, DeckFlashCard, UserFlashCard
 from ...models import UserDeckPreferences
-from django.db.models import Q, Max
+from django.db.models import Q, Max, Case, When, Value, DateTimeField
 from django.core.paginator import Paginator
 from ...validation.validation_jwt import validate_jwt
 from django.db.models import Count
@@ -85,10 +85,9 @@ def get_all_decks(request, page_number):
             flashcard_counts_dict = {
                 entry['deck_id']: entry['flashcard_count'] for entry in flashcard_counts}
 
-            flashcard_counts_list = []
-
             # Filtragem pela quantidade de flashcards
             filtered_deck_ids = []
+            flashcard_counts_list = []
             for deck in decks:
                 flashcard_count = flashcard_counts_dict.get(deck.id, 0)
                 if ((min_flashcards is None or flashcard_count >= int(min_flashcards)) and
@@ -96,12 +95,17 @@ def get_all_decks(request, page_number):
                     filtered_deck_ids.append(deck.id)
                     flashcard_counts_list.append(flashcard_count)
 
+            # Calcular flashcard_min e flashcard_max antes da paginação
+            flashcard_min = min(flashcard_counts_list) if flashcard_counts_list else 0
+            flashcard_max = max(flashcard_counts_list) if flashcard_counts_list else 0
+
+            # Aplicar filtro final nos decks
             decks = decks.filter(id__in=filtered_deck_ids)
 
+            # Adicionar contagem de flashcards e ordenação
             decks = decks.annotate(
                 flashcard_count=Count('deckflashcard'))
 
-            # Adicionar a ordenação por flashcards aqui
             if order_by == 'newer':
                 decks = decks.order_by('-created_at')
             elif order_by == 'older':
@@ -110,12 +114,26 @@ def get_all_decks(request, page_number):
                 decks = decks.order_by('-updated_at')
             elif order_by == 'lastStudied':
                 user_flashcards = UserFlashCard.objects.filter(
-                    user_id=user_id).values(
-                        'deck_flashcard__deck_id').annotate(
-                            last_time=Max('last_time'))
-                recent_deck_ids = [
-                    uf['deck_flashcard__deck_id'] for uf in user_flashcards]
-                decks = decks.filter(id__in=recent_deck_ids)
+                    user_id=user_id
+                ).values(
+                    'deck_flashcard__deck_id'
+                ).annotate(
+                    last_time=Max('last_time')
+                )
+
+                studied_decks = {
+                    uf['deck_flashcard__deck_id']: uf['last_time']
+                    for uf in user_flashcards
+                }
+
+                decks = decks.annotate(
+                    last_time=Case(
+                        *[When(id=deck_id, then=Value(last_time))
+                          for deck_id, last_time in studied_decks.items()],
+                        default=Value(None),
+                        output_field=DateTimeField()
+                    )
+                ).order_by('-last_time', '-created_at')
             elif order_by == 'flashcards':
                 decks = decks.order_by('-flashcard_count')
 
@@ -127,18 +145,12 @@ def get_all_decks(request, page_number):
             for deck in page_obj:
                 serializer = PersonDeckGetSerializer(deck)
                 serialized_deck = serializer.data
-                user_flashcard = None
 
-                # Busca o UserDeck associado ao deck atual
                 user_deck = UserDeck.objects.filter(
                     deck_id=deck.id, user_id=user_id).first()
 
                 deck_flashcards = DeckFlashCard.objects.filter(deck_id=deck.id)
-
                 flashcard_count = deck_flashcards.count()
-
-                user_preferences = UserDeckPreferences.objects.filter(
-                    deck_id=deck.id, user_id=user_id).first()
 
                 user_flashcard = UserFlashCard.objects.filter(
                     deck_flashcard_id__in=deck_flashcards.values_list(
@@ -152,18 +164,14 @@ def get_all_decks(request, page_number):
                     'new': user_deck.new if user_deck else 0,
                     'learning': user_deck.learning if user_deck else 0,
                     'reviewing': user_deck.reviewing if user_deck else 0,
-                    'favorite': user_deck.favozrite if user_deck else 0,
+                    'favorite': user_deck.favorite if user_deck else 0,
                 })
-
-            flashcard_min = min(
-                flashcard_counts_list) if flashcard_counts_list else 0
-            flashcard_max = max(
-                flashcard_counts_list) if flashcard_counts_list else 0
 
             if response_data == []:
                 return JsonResponse({"success": False,
-                                    'error': ['Não foi possível encontrar decks.']},
+                                     'error': ['Não foi possível encontrar decks.']},
                                     status=status.HTTP_404_NOT_FOUND)
+
             return JsonResponse({
                 'success': True,
                 'message': 'dados retornados',
@@ -448,6 +456,12 @@ def get_reviews(request):
 
             standard_decks = Deck.objects.filter(
                 type_deck='Standard').exclude(id__in=user_decks)
+
+            if not standard_decks:
+                return JsonResponse({"success": False,
+                                     'error': ['Não foi possível encontrar decks.'],
+                                     'hasAllDecks': True},
+                                    status=status.HTTP_404_NOT_FOUND)
 
             reviews_counts_list = []
             for deck in standard_decks:
