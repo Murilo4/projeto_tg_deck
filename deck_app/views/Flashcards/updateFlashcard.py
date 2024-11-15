@@ -182,11 +182,10 @@ def process_img(existing_images, deck_flashcard):
     img_ids_to_add = []
 
     for images_data in existing_images:
-        img_id = images_data.get('id')
         img_url = images_data.get('imageUrl')
         img_description = images_data.get('description', "")
 
-        if img_id:
+        if img_url:
             img = FlashcardPhoto.objects.filter(file_url=img_url).first()
             if img:
                 img_ids_to_keep.add(img.file_url)

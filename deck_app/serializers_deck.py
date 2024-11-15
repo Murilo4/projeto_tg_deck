@@ -15,7 +15,7 @@ class PersonDeckSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'type', 'title', 'description',
             'color', 'reviews', 'image',
-            'stars', 'public', 'allow_copy', 'new'
+            'stars', 'public', 'allow_copy'
         )
 
     def create(self, validated_data):
