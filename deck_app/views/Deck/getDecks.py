@@ -49,7 +49,7 @@ def get_deck(request, deckId):
             return JsonResponse({
                 'success': True,
                 'message': 'dados retornados',
-                'deck': [combined_data]
+                'deck': combined_data
             },
                 status=status.HTTP_200_OK)
         except exceptions.NotFound:
