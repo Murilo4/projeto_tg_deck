@@ -39,7 +39,7 @@ def get_deck(request, deckId):
             return JsonResponse({
                 'success': True,
                 'message': 'dados retornados',
-                'customDecks': [custom_decks_serializer.data]
+                'deck': [custom_decks_serializer.data]
             },
                 status=status.HTTP_200_OK)
         except exceptions.NotFound:
