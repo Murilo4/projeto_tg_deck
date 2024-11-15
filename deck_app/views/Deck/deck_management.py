@@ -424,6 +424,11 @@ def get_standard_decks(request, page_number):
         return JsonResponse({"success": False,
                              "error": ["Metodo não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    
+
+@csrf_exempt
+@api_view(['GET'])
+
 
 
 @csrf_exempt
@@ -676,9 +681,17 @@ def add_deck_to_user(request, deckId):
                 Q(type_deck="Standard") | Q(type_deck="Custom")) & Q(public=1))
 
             user_standard_deck = UserDeck.objects.create(
+                user_id=user_id, deck_id=standard_deck.id)
+
+            user_deck_preferences = UserDeckPreferences.objects.create(
                 user_id=user_id, deck_id=standard_deck.id,
                 new_per_day=3, learning_per_day=15,
-                review_per_day=2)
+                review_per_day=2
+            )
+            if user_deck_preferences is None:
+                return JsonResponse({"success": False,
+                                    "error": ["Erro ao adicionar deck"]},
+                                    status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             if user_standard_deck is None:
                 return JsonResponse({"success": False,
