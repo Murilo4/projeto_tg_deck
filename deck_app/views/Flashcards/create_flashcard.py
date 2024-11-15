@@ -8,7 +8,7 @@ from ...serializers_flashcard import DeckFlashcardTranslationSerializer
 from ...WordAudioSerializer import ExampleCreateSerializer
 from ...WordAudioSerializer import TranslationCreateSerializer
 from ...models import UserFlashCard, FlashcardPhoto
-from ...models import DeckFlashCard, UserDeck
+from ...models import DeckFlashCard # , UserDeck
 from ...models import Pronunciation, DeckFlashcardPronunciation
 from ...validation.validation_jwt import validate_jwt
 from ...models import Example, Translation
@@ -19,39 +19,43 @@ from firebase_admin import credentials
 from django.conf import settings
 import io
 import threading
-from django.db.models import F
+# from django.db.models import F
 
 
+# @csrf_exempt
 # @api_view(["POST"])
 # def update_flashcard_data(request):
 #     deckId = 15
 #     user_id = 1
 #     try:
+#         # Recupera o deck_flashcard associado ao deckId e user_id
 #         deck_flashcard = DeckFlashCard.objects.get(
-#             deck_id=deckId, user_id=user_id)
-
+#             deck_id=deckId, user=user_id)  # Aqui usamos 'user' como exemplo
+        
+#         # Filtra os flashcards do usuário associados ao deck
 #         user_flashcards = UserFlashCard.objects.filter(
 #             deck_flashcard_id=deck_flashcard.id)
-
+        
+#         # Loop pelos flashcards do usuário
 #         for user_flashcard in user_flashcards:
 #             if user_flashcard.situation == "New":
+#                 # Atualiza o campo 'new' com incremento de 1 usando F()
 #                 UserDeck.objects.filter(
-#                     user_id=user_id, deck_id=deckId).update(
-#                         new=F('new') + 1)
+#                     user_id=user_id, deck_id=deckId).update(new=F('new') + 1)
 #             elif user_flashcard.situation == "Learning":
+#                 # Atualiza o campo 'learning' com incremento de 1 usando F()
 #                 UserDeck.objects.filter(
-#                     user_id=user_id, deck_id=deckId).update(
-#                         learning=F('learning') + 1)
+#                     user_id=user_id, deck_id=deckId).update(learning=F('learning') + 1)
 #             elif user_flashcard.situation == "Reviewing":
+#                 # Atualiza o campo 'reviewing' com incremento de 1 usando F()
 #                 UserDeck.objects.filter(
-#                     user_id=user_id, deck_id=deckId).update(
-#                         reviewing=F('reviewing') + 1)
+#                     user_id=user_id, deck_id=deckId).update(reviewing=F('reviewing') + 1)
 
 #     except DeckFlashCard.DoesNotExist:
 #         # Caso não encontre o DeckFlashCard
-#         return JsonResponse({'success': False,
-#                              'message': ['DeckFlashCard não encontrado']},
-#                             status=status.HTTP_404_NOT_FOUND)
+#         return JsonResponse({'success': False, 
+#                              'message': ['DeckFlashCard não encontrado']}, 
+#                              status=status.HTTP_404_NOT_FOUND)
 
 
 def initialize_firebase():
@@ -290,7 +294,7 @@ def create_flashcard(request, deckId):
                         )
                         image.save()
 
-                # threading.Thread(target=update_flashcard_data, args=(deckId, user_id,)).start()
+                #threading.Thread(target=update_flashcard_data, args=(deckId, user_id,)).start()
                 return JsonResponse({"success": True,
                                      "message":
                                     ["Flashcard criado com sucesso"]},

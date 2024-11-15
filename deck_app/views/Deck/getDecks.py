@@ -37,9 +37,9 @@ def get_deck(request, deckId):
 
             user_deck_pref = UserDeckPreferences.objects.get(deck_id=deck.id)
             user_deck_info = {
-                'new_per_day': user_deck_pref.new_per_day,
-                'learning_per_day': user_deck_pref.learning_per_day,
-                'reviewing_per_day': user_deck_pref.review_per_day
+                'new': user_deck_pref.new_per_day,
+                'learning': user_deck_pref.learning_per_day,
+                'reviewing': user_deck_pref.review_per_day
             }
             combined_data = {
                 **deck_serializer.data,  # Dados do deck
