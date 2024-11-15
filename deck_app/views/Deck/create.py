@@ -43,13 +43,17 @@ def create_deck(request):
             if not type_deck:
                 type_deck = "Custom"
             if not user_id:
-                return JsonResponse({'success': False, 'message': ['Usuario não encontrado']}, status=status.HTTP_400_BAD_REQUEST)
+                return JsonResponse({'success': False, 
+                                     'message': ['Usuario não encontrado']},
+                                    status=status.HTTP_400_BAD_REQUEST)
             if not deck_name:
-                return JsonResponse({'success': False, 'message': ['Nome do deck é requerido']}, status=status.HTTP_400_BAD_REQUEST)
-            if not description:
-                return JsonResponse({"success": False, "message": ["É necessário informar a descrição"]}, status=status.HTTP_400_BAD_REQUEST)
+                return JsonResponse({'success': False, 
+                                     'message': ['Nome do deck é requerido']},
+                                    status=status.HTTP_400_BAD_REQUEST)
             if not img_url:
-                return JsonResponse({'success': False, 'message': ['Image URL é necessário']}, status=status.HTTP_400_BAD_REQUEST)
+                return JsonResponse({'success': False, 
+                                     'message': ['Image URL é necessário']},
+                                    status=status.HTTP_400_BAD_REQUEST)
             if not new:
                 new = 2
             if not learning:
@@ -65,8 +69,8 @@ def create_deck(request):
                         'title': deck_name,
                         'description_deck': description,
                         'image': img_url,
-                        'color': color,
-                        'type': type_deck,
+                        'color_predefinition': color,
+                        'type_deck': type_deck,
                         'reviews': 0,
                         'public': 0,
                         'allow_copy': 0,
