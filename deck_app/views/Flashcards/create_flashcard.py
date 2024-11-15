@@ -8,7 +8,7 @@ from ...serializers_flashcard import DeckFlashcardTranslationSerializer
 from ...WordAudioSerializer import ExampleCreateSerializer
 from ...WordAudioSerializer import TranslationCreateSerializer
 from ...models import UserFlashCard, FlashcardPhoto
-from ...models import DeckFlashCard  # , UserDeck
+from ...models import DeckFlashCard, UserDeck
 from ...models import Pronunciation, DeckFlashcardPronunciation
 from ...validation.validation_jwt import validate_jwt
 from ...models import Example, Translation
@@ -18,22 +18,40 @@ import firebase_admin
 from firebase_admin import credentials
 from django.conf import settings
 import io
-# import threading
+import threading
+from django.db.models import F
 
 
-
-# def update_flashcard_data(deckId, user_id):
+# @api_view(["POST"])
+# def update_flashcard_data(request):
+#     deckId = 15
+#     user_id = 1
 #     try:
-#         deck_flashcard = DeckFlashCard.objects.get(deck_id=deckId, 
-#                                                    user_id=user_id)
+#         deck_flashcard = DeckFlashCard.objects.get(
+#             deck_id=deckId, user_id=user_id)
+
 #         user_flashcards = UserFlashCard.objects.filter(
 #             deck_flashcard_id=deck_flashcard.id)
 
 #         for user_flashcard in user_flashcards:
 #             if user_flashcard.situation == "New":
-#                 user_deck = UserDeck.objects.update(
-#                     user_id=user_id, deck_id=deckId, new=+1)
+#                 UserDeck.objects.filter(
+#                     user_id=user_id, deck_id=deckId).update(
+#                         new=F('new') + 1)
 #             elif user_flashcard.situation == "Learning":
+#                 UserDeck.objects.filter(
+#                     user_id=user_id, deck_id=deckId).update(
+#                         learning=F('learning') + 1)
+#             elif user_flashcard.situation == "Reviewing":
+#                 UserDeck.objects.filter(
+#                     user_id=user_id, deck_id=deckId).update(
+#                         reviewing=F('reviewing') + 1)
+
+#     except DeckFlashCard.DoesNotExist:
+#         # Caso não encontre o DeckFlashCard
+#         return JsonResponse({'success': False,
+#                              'message': ['DeckFlashCard não encontrado']},
+#                             status=status.HTTP_404_NOT_FOUND)
 
 
 def initialize_firebase():

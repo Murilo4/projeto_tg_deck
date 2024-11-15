@@ -10,7 +10,7 @@ class Deck(models.Model):
     description_deck = models.TextField(null=True, blank=True)
     public = models.BooleanField(default=0)
     allow_copy = models.BooleanField(default=0)
-    stars = models.FloatField(default=None, blank=True)
+    stars = models.FloatField(default=None, null=True, blank=True)
     reviews = models.IntegerField(default=None, null=True, blank=True)
     image = models.CharField(max_length=555)
     difficult = models.CharField(max_length=50, default=None)
