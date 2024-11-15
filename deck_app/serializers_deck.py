@@ -5,10 +5,27 @@ from .models import UserFlashCard, UserDeck, DeckFlashCard
 from django.db.models import Max
 
 
+class PersonDeckCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Deck
+        fields = (
+            'id', 'type_deck', 'title', 'description_deck',
+            'color_predefinition', 'reviews', 'image',
+            'stars', 'public', 'allow_copy'
+        )
+
+    def create(self, validated_data):
+        deck = Deck(**validated_data)
+        deck.save()
+        return deck
+
+
 class PersonDeckSerializer(serializers.ModelSerializer):
     type = serializers.CharField(source="type_deck")
-    color = serializers.IntegerField(source="color_predefinition")
-    description = serializers.CharField(source="description_deck")
+    color = serializers.IntegerField(
+        source="color_predefinition")
+    description = serializers.CharField(
+        source="description_deck")
 
     class Meta:
         model = Deck
@@ -49,10 +66,11 @@ class UserDeckSerializer(serializers.ModelSerializer):
             'reviewing', 'favorite'
         )
 
-    def create(self, validated_data):
-        user_deck = UserDeck(**validated_data)
-        user_deck.save()
-        return user_deck
+    user_id = serializers.IntegerField()
+    deck_id = serializers.IntegerField()
+    learning = serializers.IntegerField(default=0)
+    reviewing = serializers.IntegerField(default=0)
+    favorite = serializers.BooleanField(default=False)
 
 
 class PersonDeckGetSerializer(serializers.ModelSerializer):
@@ -78,7 +96,7 @@ class PersonDeckGetSerializer(serializers.ModelSerializer):
         return DeckFlashCard.objects.filter(deck=obj).count()
 
     def get_lastModification(self, obj):
-    # Calcula a diferença em milissegundos desde o Unix epoch (1970-01-01)
+        # Calcula a diferença em milissegundos desde o Unix epoch (1970-01-01)
         epoch = datetime(1970, 1, 1, tzinfo=obj.updated_at.tzinfo)
         delta = obj.updated_at - epoch
         return int(delta.total_seconds() * 1000)
@@ -101,7 +119,8 @@ class PersonDeckGetSerializer(serializers.ModelSerializer):
     def get_favorite(self, obj):
         user_id = self.context.get('user_id')
         # Verifica se o deck é favorito para o usuário
-        user_deck = UserDeck.objects.filter(deck_id=obj.id, user_id=user_id).first()
+        user_deck = UserDeck.objects.filter(
+            deck_id=obj.id, user_id=user_id).first()
         return user_deck.favorite if user_deck else None
 
 
@@ -150,7 +169,8 @@ class UDPreferencesSerializer(serializers.ModelSerializer):
             'review_per_day'
         )
 
-    def create(self, validated_data):
-        user_deck_preferences = UserDeckPreferences(**validated_data)
-        user_deck_preferences.save()
-        return user_deck_preferences
+    user_id = serializers.IntegerField()
+    deck_id = serializers.IntegerField()
+    new_per_day = serializers.IntegerField(default=2)
+    learning_per_day = serializers.IntegerField(default=5)
+    review_per_day = serializers.IntegerField(default=2)

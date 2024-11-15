@@ -25,8 +25,9 @@ class Deck(models.Model):
 
 
 class UserDeck(models.Model):
+    id = models.IntegerField(primary_key=True)
     deck = models.ForeignKey(Deck, on_delete=models.CASCADE)
-    user_id = models.IntegerField(primary_key=True)
+    user_id = models.IntegerField()
     learning = models.IntegerField(null=True, default=0)
     reviewing = models.IntegerField(null=True, default=0)
     new = models.IntegerField(null=True, default=0)
@@ -103,6 +104,7 @@ class Pronunciation(models.Model):
 
 
 class UserDeckPreferences(models.Model):
+    id = models.IntegerField()
     deck = models.ForeignKey(Deck, on_delete=models.CASCADE)
     user_id = models.IntegerField(primary_key=True)
     new_per_day = models.IntegerField(default=None)
@@ -176,7 +178,7 @@ class DeckFlashcardPronunciation(models.Model):
 
 
 class FlashcardPhoto(models.Model):
-    deck_flashcard = models.ForeignKey(DeckFlashCard, on_delete=models.CASCADE, primary_key=True)
+    deck_flashcard = models.ForeignKey(DeckFlashCard, on_delete=models.CASCADE)
     file_url = models.CharField(max_length=500)
     file_description = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now=True)
