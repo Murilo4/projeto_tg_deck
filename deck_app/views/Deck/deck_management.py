@@ -339,7 +339,10 @@ def get_standard_decks(request, page_number):
             standard_decks = Deck.objects.filter(
                 type_deck='Standard').exclude(id__in=user_decks)
 
-            has_decks = not standard_decks
+            # Armazenar valores de reviews para cálculo de min e max
+            reviews_counts = standard_decks.values_list('reviews', flat=True)
+            reviews_min = min(reviews_counts) if reviews_counts else 0
+            reviews_max = max(reviews_counts) if reviews_counts else 0
 
             # Filtro por termo de pesquisa no título
             if search_term:
@@ -383,10 +386,7 @@ def get_standard_decks(request, page_number):
 
             # Construção da resposta
             response_data = []
-            reviews_counts_list = []
-
             for index, deck in enumerate(page_obj):
-                reviews_counts_list.append(deck.reviews)
                 flashcard_count = deck.flashcard_count if hasattr(
                     deck, 'flashcard_count') else 0
                 response_data.append({
@@ -394,16 +394,10 @@ def get_standard_decks(request, page_number):
                     'flashcards': flashcard_count
                 })
 
-            # Calcular mínimo e máximo de reviews
-            reviews_min = min(
-                reviews_counts_list) if reviews_counts_list else 0
-            reviews_max = max(
-                reviews_counts_list) if reviews_counts_list else 0
-
             if not response_data:
                 return JsonResponse({"success": False,
                                      'error': ['Não foi possível encontrar decks.'],
-                                     'hasAllDecks': has_decks},
+                                     'hasAllDecks': not standard_decks.exists()},
                                     status=status.HTTP_404_NOT_FOUND)
 
             return JsonResponse({
