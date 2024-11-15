@@ -91,7 +91,7 @@ def get_all_decks(request, page_number):
                 Max('flashcard_count'))['flashcard_count__max'] or 0
 
             user_decks = UserDeck.objects.filter(
-                user_id=user_id, 
+                user_id=user_id,
                 deck_id__in=deck_ids).only('deck_id',
                                            'favorite',
                                            'learning',
