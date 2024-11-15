@@ -28,7 +28,7 @@ def create_deck(request):
 
             # Obtendo os dados da requisição
             deck_name = request.data.get('deckName')
-            description = request.data.get('description')
+            description = request.data.get('description', None)
             img_url = request.data.get('img')
             color = request.data.get('color')
             type_deck = request.data.get('typedeck')
