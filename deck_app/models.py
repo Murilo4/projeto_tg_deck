@@ -177,7 +177,7 @@ class DeckFlashcardPronunciation(models.Model):
 
 class FlashcardPhoto(models.Model):
     deck_flashcard = models.ForeignKey(DeckFlashCard, on_delete=models.CASCADE)
-    file_url = models.CharField(max_length=500, primary_key=True)
+    file_url = models.CharField(max_length=500)
     file_description = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now=True)
     updated_at = models.DateTimeField(auto_now_add=True)

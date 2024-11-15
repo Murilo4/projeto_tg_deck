@@ -14,7 +14,6 @@ from ...validation.validation_jwt import validate_jwt
 def create_deck(request):
     if request.method == 'POST':
         try:
-            validate_session()
 
             token = request.headers.get('Authorization')
             if not token:
@@ -75,7 +74,6 @@ def create_deck(request):
                     'description_deck': description,
                     'image': img_url,
                     'color_predefinition': color,
-                    'new_deck': "New"
                 }
                 serializer = PersonDeckSerializer(data=new_deck)
                 if serializer.is_valid(raise_exception=True):
