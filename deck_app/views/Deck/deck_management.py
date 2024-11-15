@@ -7,13 +7,15 @@ from ...serializers_deck import PersonDeckGetStandardSerializer
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from ...models import Deck, UserDeck, DeckFlashCard, UserFlashCard
-from ...models import UserDeckPreferences
+from ...models import UserDeckPreferences, DeckFlashcardExample
+from ...models import DeckFlashcardPronunciation, DeckFlashcardTranslation
 from django.db.models import Q, Max, Case, When, Value, DateTimeField
 from django.core.paginator import Paginator
 from ...validation.validation_jwt import validate_jwt
 from django.db.models import Count
 from ...validation.validation_session import validate_session
 from ..Flashcards.flashcard_management import delete_flashcard
+from django.db import transaction
 
 
 @csrf_exempt
@@ -96,8 +98,10 @@ def get_all_decks(request, page_number):
                     flashcard_counts_list.append(flashcard_count)
 
             # Calcular flashcard_min e flashcard_max antes da paginação
-            flashcard_min = min(flashcard_counts_list) if flashcard_counts_list else 0
-            flashcard_max = max(flashcard_counts_list) if flashcard_counts_list else 0
+            flashcard_min = min(
+                flashcard_counts_list) if flashcard_counts_list else 0
+            flashcard_max = max(
+                flashcard_counts_list) if flashcard_counts_list else 0
 
             # Aplicar filtro final nos decks
             decks = decks.filter(id__in=filtered_deck_ids)
@@ -535,19 +539,20 @@ def deck_update(request, deckId):
     if request.method == 'PUT':
         try:
             deck_id = deckId
-            validate_session()
 
+            # Verifica o token de autorização
             token = request.headers.get('Authorization')
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'error':
-                    ['Token de autorização ausente. Faça login novamente.']
+                    'error': ['Token de autorização ausente. Faça login novamente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
+            # Valida o token JWT e obtém o ID do usuário
             jwt_data = validate_jwt(token)
             user_id = jwt_data.get('id')
 
+            # Verifica se o UserDeck existe
             user_deck_exists = UserDeck.objects.filter(
                 user_id=user_id, deck_id=deck_id).exists()
             try:
@@ -559,73 +564,132 @@ def deck_update(request, deckId):
                 }, status=status.HTTP_404_NOT_FOUND)
 
             if not user_deck_exists:
-                return JsonResponse({"sucess": False,
-                                     "error":
-                                    ["Não autorizado"]},
+                return JsonResponse({"success": False,
+                                     "error": ["Não autorizado"]},
                                     status=status.HTTP_401_UNAUTHORIZED)
 
             if deck.type_deck == "Standard":
-                return JsonResponse({"sucess": False,
-                                    "error":
-                                     ["Não autorizado"]},
+                return JsonResponse({"success": False,
+                                     "error": ["Não autorizado"]},
                                     status=status.HTTP_401_UNAUTHORIZED)
-            user_deck = UserDeck.objects.filter(deck_id=deck_id).count() > 1
-            if user_deck:
+
+            user_deck_count = UserDeck.objects.filter(deck_id=deck_id).count()
+
+            if user_deck_count == 1:
+                serializer = PersonDeckUpdateSerializer(
+                    deck, data=request.data, partial=True
+                )
+                if serializer.is_valid():
+                    serializer.save()
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Deck atualizado'
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return JsonResponse({
+                        'success': False,
+                        'error': ['Não foi possível validar os dados']
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+            with transaction.atomic():
                 new_deck_data = {field.name: getattr(
                     deck, field.name) for field in Deck._meta.fields
-                    if field.name not in ['id', 'public']}
-
-                # Altera o campo 'public'
+                                 if field.name not in ['id', 'public']}
                 new_deck_data['public'] = 0
                 new_deck = Deck.objects.create(**new_deck_data)
 
                 old_user_deck = UserDeck.objects.filter(
                     deck_id=deck_id, user_id=user_id).first()
-
-            if old_user_deck:
-                new_value = old_user_deck.new
-                learning_value = old_user_deck.learning
-                review_value = old_user_deck.review
-                favorite_value = old_user_deck.favorite
-
                 old_user_deck.delete()
 
-                user_deck_serializer = UserDeck.objects.create(
-                    user_id=user_id, deck_id=new_deck.id,
-                    new=new_value, learning=learning_value,
-                    review=review_value, favorite=favorite_value)
+                UserDeck.objects.create(
+                    user_id=user_id,
+                    deck_id=new_deck.id,
+                    new=old_user_deck.new,
+                    learning=old_user_deck.learning,
+                    review=old_user_deck.review,
+                    favorite=old_user_deck.favorite
+                )
 
-                if user_deck_serializer:
-                    user_deck_serializer.save()
+                old_preferences = UserDeckPreferences.objects.filter(
+                    deck_id=deck_id, user_id=user_id).first()
+                UserDeckPreferences.objects.create(
+                    deck_id=new_deck.id, user_id=user_id,
+                    new_per_day=old_preferences.new_per_day,
+                    learning_per_day=old_preferences.learning_per_day,
+                    review_per_day=old_preferences.review_per_day
+                )
 
-                if user_deck_serializer.is_valid():
-                    user_deck_serializer.save()
+                deck_flashcards = DeckFlashCard.objects.filter(deck_id=deck_id)
+                for flashcard in deck_flashcards:
+                    new_flashcard = DeckFlashCard.objects.create(
+                        deck_id=new_deck.id,
+                        flashcard_id=flashcard.id,
+                    )
 
-                # Atualizar o novo deck com os dados recebidos
+                    deck_flashcard_id = new_flashcard.id
+
+                    for user_flashcard in UserFlashCard.objects.filter(
+                            deck_flashcard_id=deck_flashcard_id):
+
+                        UserFlashCard.objects.create(
+                            user_id=user_flashcard.user_id,
+                            deck_flashcard_id=new_flashcard.id,
+                            new=user_flashcard.new,
+                            learning=user_flashcard.learning,
+                            review=user_flashcard.review,
+                            favorite=user_flashcard.favorite
+                        )
+                        # Deleta o UserFlashCard antigo
+                        user_flashcard.delete()
+
+                    for deck_flashcard_example in DeckFlashcardExample.objects.filter(
+                            deck_flashcard_id=deck_flashcard_id):
+                        DeckFlashcardExample.objects.create(
+                            deck_flashcard_id=new_flashcard.id,
+                            example_text=deck_flashcard_example.example_text
+                        )
+
+                    for deck_flashcard_translation in DeckFlashcardTranslation.objects.filter(
+                            deck_flashcard_id=deck_flashcard_id):
+                        DeckFlashcardTranslation.objects.create(
+                            deck_flashcard_id=new_flashcard.id,
+                            translation_text=deck_flashcard_translation.translation_text
+                        )
+
+                    for deck_flashcard_pronunciation in DeckFlashcardPronunciation.objects.filter(
+                            deck_flashcard_id=deck_flashcard_id):
+                        DeckFlashcardPronunciation.objects.create(
+                            deck_flashcard_id=new_flashcard.id,
+                            pronunciation_url=deck_flashcard_pronunciation.pronunciation_url
+                        )
+
+                # Serializer para o novo deck
                 serializer = PersonDeckUpdateSerializer(
-                    new_deck, data=request.data, partial=True)
-            else:
-                # Se existir apenas um registro, atualize-o
-                serializer = PersonDeckUpdateSerializer(
-                    deck, data=request.data, partial=True)
-            if serializer.is_valid():
-                serializer.save()
-                return JsonResponse({
-                    'success': True,
-                    'message': 'deck atualizado'},
-                    status=status.HTTP_200_OK)
-            else:
-                return JsonResponse({'success': False,
-                                     'error':
-                                     ['Não foi possivel validar os dados']},
-                                    status=status.HTTP_400_BAD_REQUEST)
+                    new_deck, data=request.data, partial=True
+                )
+
+                # Valida e salva o serializer
+                if serializer.is_valid():
+                    serializer.save()
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Deck atualizado'
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return JsonResponse({
+                        'success': False,
+                        'error': ['Não foi possível validar os dados']
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
         except exceptions.NotFound:
             return JsonResponse({'success': False,
-                                'error': ['Usuario não localizado']},
+                                 'error': ['Usuário não localizado']},
                                 status=status.HTTP_400_BAD_REQUEST)
+
     else:
         return JsonResponse({"success": False,
-                             "error": ["Metodo não autorizado"]},
+                             "error": ["Método não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
@@ -635,7 +699,6 @@ def delete_deck(request, deckId):
     if request.method == 'DELETE':
         try:
             deck_id = deckId
-            validate_session()
 
             token = request.headers.get('Authorization')
             if not token:
@@ -652,43 +715,44 @@ def delete_deck(request, deckId):
                 return JsonResponse({'success': False,
                                      'error': ['userId é necessário']},
                                     status=status.HTTP_400_BAD_REQUEST)
+
             deck_user = UserDeck.objects.filter(
                 deck_id=deck_id, user_id=user_id)
             if not deck_user:
                 return JsonResponse({'success': False,
-                                     'error': ['Deck não encontrado para este usuário']},
+                                     'error':
+                                     ['Deck não encontrado para este usuário']},
                                     status=status.HTTP_404_NOT_FOUND)
-            # Busca o Deck completo usando o ID
+
             deck = Deck.objects.filter(id=deck_id).first()
             if not deck:
                 return JsonResponse({'success': False,
-                                     'error': ['Deck não encontrado para este usuário']},
+                                     'error':
+                                     ['Deck não encontrado para este usuário']},
                                     status=status.HTTP_404_NOT_FOUND)
 
-            # Agora, antes de deletar o deck, deletar todos os flashcards associados ao deck
             deck_flashcards = DeckFlashCard.objects.filter(deck_id=deck_id)
 
-            for deck_flashcard in deck_flashcards:
-                flashcard_id = deck_flashcard.flashcard_id
-                # Chama a função de delete_flashcard passando os parâmetros necessários
-                delete_flashcard(request, flashcard_id, deck_id)
-
-            # Verificação do tipo de deck e remoção conforme necessário
             if deck.type_deck == 'Custom' and deck.public == 0:
+                for deck_flashcard in deck_flashcards:
+                    flashcard_id = deck_flashcard.flashcard_id
+
+                    delete_flashcard(request, flashcard_id, deck_id)
                 deck_user.delete()
                 deck.delete()
 
             elif deck.type_deck == 'Custom' and deck.public == 1:
                 user_deck = UserDeck.objects.filter(
                     deck_id=deck_id).count() > 1
+                for deck_flashcard in deck_flashcards:
+                    flashcard_id = deck_flashcard.flashcard_id
 
+                    delete_flashcard(request, flashcard_id, deck_id)
                 if user_deck:
                     deck_user.delete()
             elif deck.type_deck == 'Standard':
-                # Remove apenas da tabela UserDeck
                 deck_user.delete()
 
-            # Retorna a resposta de sucesso
             return JsonResponse({
                 'success': True,
                 'message': ['Deck removido com sucesso.'],

@@ -625,8 +625,6 @@ def delete_flashcard(request, flashcardId, deckId):
                                     ["É necessario informar o flashcard id"]},
                                     status=status.HTTP_400_BAD_REQUEST)
 
-            validate_session()
-
             token = request.headers.get('Authorization')
             if not token:
                 return JsonResponse({
