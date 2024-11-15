@@ -54,15 +54,14 @@ def create_deck(request):
                                     status=status.HTTP_400_BAD_REQUEST)
             if not description:
                 return JsonResponse({"success": False,
-                                     "message": 
+                                     "message":
                                     ["É necessario informar a descrição"]},
                                     status=status.HTTP_400_BAD_REQUEST)
 
             if not img_url:
                 return JsonResponse({'success': False,
                                     'message': ['Image URL é necessario']},
-                                    status=status.HTTP_400_BAD_REQUEST
-                                    )
+                                    status=status.HTTP_400_BAD_REQUEST)
             if not new:
                 new = 2
             if not learning:
@@ -106,10 +105,11 @@ def create_deck(request):
                                                  ['Deck criado com sucesso']},
                                                 status=status.HTTP_201_CREATED)
                 else:
-                    return JsonResponse({'success': False,
-                                        'message':
-                                         ['Não foi possivel validar os dados']},
-                                        status=status.HTTP_400_BAD_REQUEST)
+                    return JsonResponse({
+                        'success': False,
+                        'message':
+                        ['Não foi possivel validar os dados']},
+                        status=status.HTTP_400_BAD_REQUEST)
             else:
                 new_deck_default = {
                     'title': deck_name,
@@ -130,7 +130,7 @@ def create_deck(request):
         except exceptions.NotFound:
             return JsonResponse({'success': False,
                                  'message':
-                                ['não foi possivel validar os dados inseridos']},
+                                ['não foi possivel validar os dados']},
                                 status=status.HTTP_404_NOT_FOUND)
     else:
         return JsonResponse({'success': False,
