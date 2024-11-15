@@ -6,11 +6,14 @@ from django.db.models import Max
 
 
 class PersonDeckSerializer(serializers.ModelSerializer):
+    type = serializers.CharField(source="type_deck")
+    color = serializers.IntegerField(source="color_predefinition")
+    description = serializers.CharField(source="description_deck")
     class Meta:
         model = Deck
         fields = (
-            'id', 'type_deck', 'title', 'description_deck',
-            'color_predefinition', 'reviews', 'image',
+            'id', 'type', 'title', 'description',
+            'color', 'reviews', 'image',
             'stars', 'public', 'allow_copy', 'new_deck'
         )
 

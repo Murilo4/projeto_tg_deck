@@ -78,10 +78,8 @@ def get_all_decks(request, page_number):
                     }, status=status.HTTP_400_BAD_REQUEST)
                 decks = decks.filter(type_deck=deck_type_filter)
 
-            # Conta os flashcards em cada deck
             flashcard_counts = DeckFlashCard.objects.values(
-                'deck_id').annotate(flashcard_count=Count('flashcard_id')
-            )
+                'deck_id').annotate(flashcard_count=Count('flashcard_id'))
 
             # Dicionário para contar flashcards de cada deck
             flashcard_counts_dict = {
@@ -190,6 +188,68 @@ def get_all_decks(request, page_number):
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
+@csrf_exempt
+@api_view(["GET"])
+def get_min_max_flashcard(request):
+    if request.method == 'GET':
+        try:
+            token = request.headers.get('Authorization')
+            if not token:
+                return JsonResponse({
+                    'success': False,
+                    'error':
+                    ['Token de autorização ausente. Faça login novamente.']
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
+            jwt_data = validate_jwt(token)
+            user_id = jwt_data.get('id')
+            if not user_id:
+                return JsonResponse({
+                    "success": False,
+                    "error": ["Token inválido"]
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
+            user_decks = UserDeck.objects.filter(user_id=user_id).values_list(
+                'deck_id', flat=True)
+            deck_ids = list(user_decks)
+            print(deck_ids)
+
+            decks = Deck.objects.filter(id__in=deck_ids)
+
+            flashcard_counts = DeckFlashCard.objects.values(
+                'deck_id').annotate(flashcard_count=Count('flashcard_id'))
+            print(flashcard_counts)
+
+            # Dicionário para contar flashcards de cada deck
+            flashcard_counts_dict = {
+                entry['deck_id']: entry['flashcard_count'] for entry in flashcard_counts}
+
+            flashcard_counts_list = []
+
+            for deck in decks:
+                flashcard_count = flashcard_counts_dict.get(deck.id, 0)
+                flashcard_counts_list.append(flashcard_count)
+
+            flashcard_min = min(
+                flashcard_counts_list) if flashcard_counts_list else 0
+            flashcard_max = max(
+                flashcard_counts_list) if flashcard_counts_list else 0
+
+            return JsonResponse({"sucess": True,
+                                 "message": "valores retornados",
+                                "flashcardMin": flashcard_min,
+                                 "flashcardMax": flashcard_max},
+                                status=status.HTTP_200_OK)
+        except exceptions.NotFound:
+            return JsonResponse({"success": False,
+                                 "error": "deck não encontrado"},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+    else:
+        return JsonResponse({"success": False,
+                            "error": ["Metodo não autorizado"]},
+                            status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
 
 @csrf_exempt
 @api_view(['GET'])
@@ -260,35 +320,40 @@ def get_standard_decks(request, page_number):
             # IDs dos decks que o usuário já possui
             user_decks = UserDeck.objects.filter(
                 user_id=user_id).values_list('deck_id', flat=True)
-            
-            
 
             # Filtros da query
             difficulty = request.GET.getlist('difficulty', None)
             order_by = request.GET.get('orderBy', None)
             min_reviews = request.GET.get('minReviews', None)
             max_reviews = request.GET.get('maxReviews', None)
-            search_term = request.GET.get('search', None)  # Novo filtro de pesquisa
+            search_term = request.GET.get(
+                'search', None)  # Novo filtro de pesquisa
 
             # Filtrar os decks padrão que não estão nos decks do usuário
-            standard_decks = Deck.objects.filter(type_deck='Standard').exclude(id__in=user_decks)
+            standard_decks = Deck.objects.filter(
+                type_deck='Standard').exclude(id__in=user_decks)
 
             has_decks = not standard_decks
 
             # Filtro por termo de pesquisa no título
             if search_term:
-                standard_decks = standard_decks.filter(title__icontains=search_term)
+                standard_decks = standard_decks.filter(
+                    title__icontains=search_term)
 
             # Filtros adicionais de reviews e dificuldade
             if min_reviews is not None:
-                standard_decks = standard_decks.filter(reviews__gte=int(min_reviews))
+                standard_decks = standard_decks.filter(
+                    reviews__gte=int(min_reviews))
             if max_reviews is not None:
-                standard_decks = standard_decks.filter(reviews__lte=int(max_reviews))
+                standard_decks = standard_decks.filter(
+                    reviews__lte=int(max_reviews))
             if difficulty:
-                standard_decks = standard_decks.filter(difficult__in=difficulty)
+                standard_decks = standard_decks.filter(
+                    difficult__in=difficulty)
 
             # Anotação de contagem de flashcards
-            standard_decks = standard_decks.annotate(flashcard_count=Count('deckflashcard'))
+            standard_decks = standard_decks.annotate(
+                flashcard_count=Count('deckflashcard'))
 
             # Ordenação conforme especificado
             if order_by == 'newest':
@@ -307,7 +372,8 @@ def get_standard_decks(request, page_number):
             page_obj = paginator.get_page(page_number)
 
             # Serialização
-            standard_decks_serializer = PersonDeckGetStandardSerializer(page_obj, many=True)
+            standard_decks_serializer = PersonDeckGetStandardSerializer(
+                page_obj, many=True)
 
             # Construção da resposta
             response_data = []
@@ -315,15 +381,18 @@ def get_standard_decks(request, page_number):
 
             for index, deck in enumerate(page_obj):
                 reviews_counts_list.append(deck.reviews)
-                flashcard_count = deck.flashcard_count if hasattr(deck, 'flashcard_count') else 0
+                flashcard_count = deck.flashcard_count if hasattr(
+                    deck, 'flashcard_count') else 0
                 response_data.append({
                     **standard_decks_serializer.data[index],
                     'flashcards': flashcard_count
                 })
 
             # Calcular mínimo e máximo de reviews
-            reviews_min = min(reviews_counts_list) if reviews_counts_list else 0
-            reviews_max = max(reviews_counts_list) if reviews_counts_list else 0
+            reviews_min = min(
+                reviews_counts_list) if reviews_counts_list else 0
+            reviews_max = max(
+                reviews_counts_list) if reviews_counts_list else 0
 
             if not response_data:
                 return JsonResponse({"success": False,
@@ -383,31 +452,13 @@ def get_deck(request, deckId):
 
             custom_decks = Deck.objects.get(id=deck_id)
             custom_decks_serializer = PersonDeckGetSerializer(custom_decks)
-            # deck_data = {
-            #     'type': custom_decks_serializer.data.get("type_deck"),
-            #     'colorPredefinition': custom_decks_serializer.data.get(
-            #         "color_predefinition"),
-            #     'title': custom_decks_serializer.data.get("title"),
-            #     'image': custom_decks_serializer.data.get("image"),
-            #     'lastModification': custom_decks_serializer.data.get(
-            #         "lastModification"), 
-            #     'createdData': custom_decks_serializer.data.get("createdData"),
-            #     'description': custom_decks_serializer.data.get(
-            #         "description_deck"),
-            #     'public': custom_decks_serializer.data.get("public"),
-            #     'difficult': custom_decks_serializer.data.get("difficult"),
-            #     'stars': custom_decks_serializer.data.get("stars"),
-            #     'reviews': custom_decks_serializer.data.get("reviews"),
-            #     'favorite': custom_decks_serializer.data.get("favorite"),
-            #     'flashcards': custom_decks_serializer.data.get("flashcards"),
-            #     'last_time': custom_decks_serializer.data.get("last_time")
-            # }
+
             return JsonResponse({
                 'success': True,
                 'message': 'dados retornados',
                 'custom_decks': [custom_decks_serializer.data]
             },
-             status=status.HTTP_200_OK)
+                status=status.HTTP_200_OK)
         except exceptions.NotFound:
             return JsonResponse({'success': False,
                                  'error': ['Usuarios não encontrados']},
@@ -456,7 +507,7 @@ def deck_update(request, deckId):
             if deck.type_deck == "Standard":
                 return JsonResponse({"sucess": False,
                                     "error":
-                                    ["Não autorizado"]},
+                                     ["Não autorizado"]},
                                     status=status.HTTP_401_UNAUTHORIZED)
             user_deck = UserDeck.objects.filter(deck_id=deck_id).count() > 1
             if user_deck:
@@ -468,13 +519,24 @@ def deck_update(request, deckId):
                 new_deck_data['public'] = 0
                 new_deck = Deck.objects.create(**new_deck_data)
 
-                # Desvincular o usuário do deck antigo
-                UserDeck.objects.filter(
-                    deck_id=deck_id, user_id=user_id).delete()
+                old_user_deck = UserDeck.objects.filter(
+                    deck_id=deck_id, user_id=user_id).first()
 
-                # Associar o novo deck ao usuário
+            if old_user_deck:
+                new_value = old_user_deck.new
+                learning_value = old_user_deck.learning
+                review_value = old_user_deck.review
+                favorite_value = old_user_deck.favorite
+
+                old_user_deck.delete()
+
                 user_deck_serializer = UserDeck.objects.create(
-                    user_id=user_id, deck_id=new_deck.id)
+                    user_id=user_id, deck_id=new_deck.id,
+                    new=new_value, learning=learning_value,
+                    review=review_value, favorite=favorite_value)
+
+                if user_deck_serializer:
+                    user_deck_serializer.save()
 
                 if user_deck_serializer.is_valid():
                     user_deck_serializer.save()
@@ -542,10 +604,10 @@ def delete_deck(request, deckId):
                 return JsonResponse({'success': False,
                                      'error': ['Deck não encontrado para este usuário']},
                                     status=status.HTTP_404_NOT_FOUND)
-            
+
             # Agora, antes de deletar o deck, deletar todos os flashcards associados ao deck
             deck_flashcards = DeckFlashCard.objects.filter(deck_id=deck_id)
-            
+
             for deck_flashcard in deck_flashcards:
                 flashcard_id = deck_flashcard.flashcard_id
                 # Chama a função de delete_flashcard passando os parâmetros necessários
@@ -588,7 +650,6 @@ def add_deck_to_user(request, deckId):
         deck_id = deckId
         try:
             token = request.headers.get('Authorization')
-            print(token)
             if not token:
                 return JsonResponse({
                     'success': False,
@@ -597,16 +658,16 @@ def add_deck_to_user(request, deckId):
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             jwt_data = validate_jwt(token)
-            print(jwt_data)
             user_id = jwt_data.get('id')
-            print(user_id)
 
             if not deck_id:
                 return JsonResponse({'success': False,
                                     'error': ['Deck não encontrado.']},
                                     status=status.HTTP_404_NOT_FOUND)
 
-            if UserDeck.objects.filter(user_id=user_id, deck_id=deck_id).exists():
+            if UserDeck.objects.filter(
+                    user_id=user_id, deck_id=deck_id).exists():
+
                 return JsonResponse({"success": False,
                                     "error": ["Deck já pertence ao usuário."]},
                                     status=status.HTTP_409_CONFLICT)
@@ -615,7 +676,9 @@ def add_deck_to_user(request, deckId):
                 Q(type_deck="Standard") | Q(type_deck="Custom")) & Q(public=1))
 
             user_standard_deck = UserDeck.objects.create(
-                user_id=user_id, deck_id=standard_deck.id)
+                user_id=user_id, deck_id=standard_deck.id,
+                new_per_day=3, learning_per_day=15,
+                review_per_day=2)
 
             if user_standard_deck is None:
                 return JsonResponse({"success": False,

@@ -29,7 +29,7 @@ class UserDeck(models.Model):
     user_id = models.IntegerField(primary_key=True)
     learning = models.IntegerField(null=True, default=0)
     reviewing = models.IntegerField(null=True, default=0)
-    new_deck = models.IntegerField(null=True, default=0)
+    new = models.IntegerField(null=True, default=0)
     favorite = models.BooleanField(null=True, default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
