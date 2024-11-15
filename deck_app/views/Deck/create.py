@@ -126,10 +126,15 @@ def create_deck(request):
                             'message': ['Deck criado com sucesso']
                         }, status=status.HTTP_201_CREATED)
 
-        except NotFound:
-            return JsonResponse({'success': False, 'message': ['Não foi possível validar os dados']}, status=status.HTTP_404_NOT_FOUND)
+        except exceptions.NotFound:
+            return JsonResponse({'success': False, 
+                                 'message': ['Não foi possível validar os dados']}, 
+                                status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            # Qualquer outro erro será capturado e uma resposta de erro será retornada
-            return JsonResponse({'success': False, 'message': [f'Erro inesperado: {str(e)}']}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return JsonResponse({'success': False, 
+                                 'message': [f'Erro inesperado: {str(e)}']}, 
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
-        return JsonResponse({'success': False, 'message': ['Método não suportado']}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return JsonResponse({'success': False, 
+                             'message': ['Método não suportado']}, 
+                            status=status.HTTP_405_METHOD_NOT_ALLOWED)
