@@ -5,7 +5,7 @@ from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from ...models import Deck, UserDeck, DeckFlashCard, UserFlashCard
 from ...validation.validation_jwt import validate_jwt
-from ..Flashcards.flashcard_management import delete_flashcard
+from ..Flashcards.DeleteFlashcard import delete_flashcard
 from django.db import transaction
 
 

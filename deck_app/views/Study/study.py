@@ -89,7 +89,8 @@ def study_flashcard(request, deck_flashcard_id, user_id, star_rating):
 
         return JsonResponse({
             'success': True,
-            'message': 'Estado do flashcard e prioridade atualizados com sucesso.',
+            'message':
+            'Estado do flashcard e prioridade atualizados com sucesso.',
             'new_situation': user_flashcard.situation,
             'new_priority': new_priority
         }, status=status.HTTP_200_OK)
@@ -116,7 +117,7 @@ def get_flashcards_for_study(request, deckId):
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'error': ['Token de autorização ausente. Faça login novamente.']
+                    'error': ['Token de autorização ausente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             # Validando o JWT e recuperando o user_id
@@ -199,7 +200,8 @@ def get_flashcards_for_study(request, deckId):
                     deckflashcard__userflashcards__situation='Reviewing',
                     deckflashcard__userflashcards__next_time__gt=now
                 ).order_by(
-                    'deckflashcard__userflashcards__next_time')[:reviewing_per_day]
+                    'deckflashcard__userflashcards__next_time'
+                    )[:reviewing_per_day]
 
             flashcards_to_study['review_flashcards'] = review_flashcards
 
@@ -207,11 +209,14 @@ def get_flashcards_for_study(request, deckId):
             for situation, flashcards in flashcards_to_study.items():
                 for flashcard in flashcards:
                     examples = DeckFlashcardExample.objects.filter(
-                        deck_flashcard__flashcard_id=flashcard.id).select_related('example')[:2]
+                        deck_flashcard__flashcard_id=flashcard.id
+                        ).select_related('example')[:2]
                     translations = DeckFlashcardTranslation.objects.filter(
-                        deck_flashcard__flashcard_id=flashcard.id).select_related('translation')[:2]
+                        deck_flashcard__flashcard_id=flashcard.id
+                        ).select_related('translation')[:2]
                     pronunciations = DeckFlashcardPronunciation.objects.filter(
-                        deck_flashcard__flashcard_id=flashcard.id).select_related('pronunciation')[:2]
+                        deck_flashcard__flashcard_id=flashcard.id
+                        ).select_related('pronunciation')[:2]
 
                     # Formatação dos dados do flashcard
                     flashcard_data = FlashCardGetSerializer(flashcard).data

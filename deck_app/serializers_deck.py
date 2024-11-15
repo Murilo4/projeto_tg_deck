@@ -121,7 +121,7 @@ class PersonDeckGetSerializer(serializers.ModelSerializer):
         # Verifica se o deck é favorito para o usuário
         user_deck = UserDeck.objects.filter(
             deck_id=obj.id, user_id=user_id).first()
-        return user_deck.favorite if user_deck else None
+        return user_deck.favorite if user_deck else 0
 
 
 class PersonDeckGetStandardSerializer(serializers.ModelSerializer):

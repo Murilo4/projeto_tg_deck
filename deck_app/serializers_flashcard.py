@@ -1,10 +1,9 @@
 from rest_framework import serializers
 from .models import FlashCard, DeckFlashCard
 from .models import UserFlashCard, DeckFlashcardExample
-from .models import DeckFlashcardPronunciation, DeckFlashcardTranslation
+from .models import DeckFlashcardTranslation
 from datetime import datetime
-from .WordAudioSerializer import ExampleSerializer, PronunciationSerializer
-from .WordAudioSerializer import TranslationSerializer
+
 
 
 class CreateFlashCardSerializer(serializers.ModelSerializer):
@@ -88,7 +87,7 @@ class UserFlashCardGetSerializer(serializers.ModelSerializer):
         else:
             now = datetime.now(obj.last_time.tzinfo)
         return now
-    
+
 
 class DeckFlashcardExampleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -99,7 +98,7 @@ class DeckFlashcardExampleSerializer(serializers.ModelSerializer):
         Deck_flashcard_example = DeckFlashcardExample(**validated_data)
         Deck_flashcard_example.save()
         return Deck_flashcard_example
-    
+
 
 class DeckFlashcardTranslationSerializer(serializers.ModelSerializer):
     class Meta:

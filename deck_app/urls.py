@@ -12,8 +12,8 @@ from .views.Deck.getDeckToUser import get_all_decks_to_user
 from .views.Flashcards.create_flashcard import create_flashcard
 from .views.Flashcards.getAllFlashcard import get_all_flashcard
 from .views.Flashcards.updateFlashcard import update_flashcard
-from .views.Flashcards.flashcard_management import get_one_flashcard
-from .views.Flashcards.flashcard_management import delete_flashcard
+from .views.Flashcards.getOneFlashcard import get_one_flashcard
+from .views.Flashcards.DeleteFlashcard import delete_flashcard
 from .views.Audio.text import get_translated_word, get_example_sentences
 from .views.Audio.text import get_correct_word, get_correct_phrase
 from .views.Audio.audio import get_pronunciations

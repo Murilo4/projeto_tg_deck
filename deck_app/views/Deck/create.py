@@ -3,7 +3,8 @@ from django.http import JsonResponse
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import exceptions
-from ...serializers_deck import PersonDeckCreateSerializer, UDPreferencesSerializer
+from ...serializers_deck import PersonDeckCreateSerializer
+from ...serializers_deck import UDPreferencesSerializer
 from ...serializers_deck import UserDeckSerializer, CreateStandardDecks
 from django.db import transaction
 from ...validation.validation_jwt import validate_jwt
@@ -19,7 +20,7 @@ def create_deck(request):
             if not token:
                 return JsonResponse({
                     'success': False,
-                    'message': ['Token de autorização ausente. Faça login novamente.']
+                    'message': ['Token de autorização ausente.']
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             # Validando o token
@@ -74,17 +75,17 @@ def create_deck(request):
                         'reviews': None,
                         'public': 0,
                         'allow_copy': 0,
-                        'stars': 0
+                        'stars': None,
                     }
-                    # Criando o deck
                     serializer = PersonDeckCreateSerializer(data=new_deck)
                     if serializer.is_valid(raise_exception=True):
                         deck = serializer.save()
                         deck_id = deck.id
 
-                        # Criando o relacionamento UserDeck
-                        new_user_deck = {'user_id': user_id, 'deck_id': deck_id}
-                        serializer_user_deck = UserDeckSerializer(data=new_user_deck)
+                        new_user_deck = {'user_id': user_id,
+                                         'deck_id': deck_id}
+                        serializer_user_deck = UserDeckSerializer(
+                            data=new_user_deck)
                         if serializer_user_deck.is_valid(raise_exception=True):
                             serializer_user_deck.save()
 
@@ -96,11 +97,12 @@ def create_deck(request):
                                 'learning_per_day': learning,
                                 'review_per_day': review
                             }
-                            user_deck_preferences = UDPreferencesSerializer(data=preferences)
-                            if user_deck_preferences.is_valid(raise_exception=True):
+                            user_deck_preferences = UDPreferencesSerializer(
+                                data=preferences)
+                            if user_deck_preferences.is_valid(
+                                    raise_exception=True):
                                 user_deck_preferences.save()
 
-                                # Se tudo for bem-sucedido, comita as transações
                                 return JsonResponse({
                                     'success': True,
                                     'message': ['Deck criado com sucesso']
@@ -127,14 +129,15 @@ def create_deck(request):
                         }, status=status.HTTP_201_CREATED)
 
         except exceptions.NotFound:
-            return JsonResponse({'success': False, 
-                                 'message': ['Não foi possível validar os dados']}, 
-                                status=status.HTTP_404_NOT_FOUND)
+            return JsonResponse({
+                'success': False,
+                'message': ['Não foi possível validar os dados']},
+                status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return JsonResponse({'success': False, 
-                                 'message': [f'Erro inesperado: {str(e)}']}, 
+            return JsonResponse({'success': False,
+                                 'message': [f'Erro inesperado: {str(e)}']},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
-        return JsonResponse({'success': False, 
-                             'message': ['Método não suportado']}, 
+        return JsonResponse({'success': False,
+                             'message': ['Método não suportado']},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)

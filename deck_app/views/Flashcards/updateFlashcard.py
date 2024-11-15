@@ -132,7 +132,7 @@ def update_flashcard(request, flashcardId, deckId):
                                 status=status.HTTP_404_NOT_FOUND)
         except FlashCard.DoesNotExist:
             return JsonResponse({'success': False,
-                                 'meserrorsage': ['FlashCard não encontrado.']},
+                                 'error': ['FlashCard não encontrado.']},
                                 status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return JsonResponse({'success': False,

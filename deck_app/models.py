@@ -1,6 +1,4 @@
 from django.db import models
-import requests
-from django.core.exceptions import ValidationError
 import os
 SECRET_KEY = os.getenv('URL_TO_USER_DATA_BASE')
 
@@ -12,7 +10,7 @@ class Deck(models.Model):
     description_deck = models.TextField(null=True, blank=True)
     public = models.BooleanField(default=0)
     allow_copy = models.BooleanField(default=0)
-    stars = models.FloatField(default=None)
+    stars = models.FloatField(default=None, blank=True)
     reviews = models.IntegerField(default=None, null=True, blank=True)
     image = models.CharField(max_length=555)
     difficult = models.CharField(max_length=50, default=None)
@@ -30,17 +28,10 @@ class UserDeck(models.Model):
     user_id = models.IntegerField()
     learning = models.IntegerField(null=True, default=0)
     reviewing = models.IntegerField(null=True, default=0)
-    new = models.IntegerField(null=True, default=0)
+    new = models.IntegerField(null=True, default=0),
     favorite = models.BooleanField(null=True, default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    def clean(self):
-        # Valida o user_id ao tentar salvar o deck
-        response = requests.get(
-            f'http://ec2-54-94-30-193.sa-east-1.compute.amazonaws.com:8000/get-user-to-deck/{self.user_id}/')
-        if response.status_code == 404:
-            raise ValidationError(f'Usuário com ID {self.user_id} não existe.')
 
     class Meta:
         managed = False

@@ -115,9 +115,9 @@ def get_all_flashcard(request, page_number, deckId):
                 'situation', 'deck_flashcard__flashcard_id')
 
             user_flashcards_dict = {
-                uf.deck_flashcard.flashcard_id: uf for uf in user_flashcards_qs}
+                uf.deck_flashcard.flashcard_id: uf for uf in user_flashcards_qs
+                }
 
-            # Formatação da resposta
             response_data = []
             for index, flashcard in enumerate(page_obj):
                 serialized_flashcard = flashcards_serializer.data[index]
