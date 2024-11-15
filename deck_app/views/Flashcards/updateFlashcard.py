@@ -177,13 +177,41 @@ def remove_old_tr(deck_flashcard, exist_tr_ids):
         deck_flashcard=deck_flashcard).delete()
 
 
-def remove_old_img(deck_flashcard, exist_img_urls):
-    current_img_urls = FlashcardPhoto.objects.filter(
-        deck_flashcard=deck_flashcard
-    ).values_list('file_url', flat=True)
+def process_img(existing_images, deck_flashcard):
+    img_ids_to_keep = set()
+    img_ids_to_add = []
 
-    img_to_remove = set(current_img_urls) - set(exist_img_urls)
-    FlashcardPhoto.objects.filter(file_url__in=img_to_remove).delete()
+    for images_data in existing_images:
+        img_id = images_data.get('id')
+        img_url = images_data.get('imageUrl')
+        img_description = images_data.get('description', "")
+
+        if img_id:
+            img = FlashcardPhoto.objects.filter(file_url=img_url).first()
+            if img:
+                img_ids_to_keep.add(img.file_url)
+            else:
+                # If image doesn't exist, add it to the new list
+                img_ids_to_add.append(FlashcardPhoto(
+                    deck_flashcard_id=deck_flashcard.id,
+                    file_url=img_url,
+                    file_description=img_description
+                ))
+        else:
+            img = FlashcardPhoto.objects.filter(file_url=img_url).first()
+            if img:
+                img_ids_to_keep.add(img.file_url)
+            else:
+                img_ids_to_add.append(FlashcardPhoto(
+                    deck_flashcard_id=deck_flashcard.id,
+                    file_url=img_url,
+                    file_description=img_description
+                ))
+
+    # Ensure no duplicates are added
+    FlashcardPhoto.objects.bulk_create(img_ids_to_add)
+    
+    return img_ids_to_keep, img_ids_to_add
 
 
 def update_flashcard_data(flashcard, data):

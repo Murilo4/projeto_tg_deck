@@ -9,12 +9,13 @@ class PersonDeckSerializer(serializers.ModelSerializer):
     type = serializers.CharField(source="type_deck")
     color = serializers.IntegerField(source="color_predefinition")
     description = serializers.CharField(source="description_deck")
+
     class Meta:
         model = Deck
         fields = (
             'id', 'type', 'title', 'description',
             'color', 'reviews', 'image',
-            'stars', 'public', 'allow_copy', 'new_deck'
+            'stars', 'public', 'allow_copy', 'new'
         )
 
     def create(self, validated_data):
