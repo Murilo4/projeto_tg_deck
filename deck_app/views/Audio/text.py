@@ -16,7 +16,7 @@ def get_correct_word(request):
 
     if not word:
         return JsonResponse({'success': False,
-                             'error': 'Texto é obrigatório.'},
+                             'error': ['Texto é obrigatório.']},
                             status=status.HTTP_404_NOT_FOUND)
 
     try:
@@ -24,12 +24,12 @@ def get_correct_word(request):
         corrected_text = str(blob.correct())
         if corrected_text == word:
             return JsonResponse({'success': True,
-                                 'message': 'Nenhuma mudança necessária.'},
+                                 'message': ['Nenhuma mudança necessária.']},
                                 status=status.HTTP_200_OK)
         else:
             corrected_text = blob.spellcheck()
             return JsonResponse({'success': True,
-                                 'message': "correções sugeridas",
+                                 'message': ["correções sugeridas"],
                                  'correctedText': corrected_text},
                                 status=status.HTTP_200_OK)
     except Exception as e:
@@ -71,7 +71,7 @@ def get_correct_phrase(request):
     phrase = request.data.get("phrase")
     if not phrase:
         return JsonResponse({"success": False,
-                             "error": "Frase não fornecida"},
+                             "error": ["Frase não fornecida"]},
                             status=status.HTTP_400_BAD_REQUEST)
 
     try:
@@ -86,31 +86,31 @@ def get_correct_phrase(request):
         )
         if response.status_code != 200:
             return JsonResponse({"success": False, 
-                                 "error": f"Erro {response.status_code}: {response.text}"},
+                                 "error": [f"Erro {response.status_code}: {response.text}"]},
                                 status=response.status_code)
 
         try:
             resp_json = response.json()
         except ValueError:
             return JsonResponse({"success": False,
-                                 "error": "Resposta não é um JSON válido",
+                                 "error": ["Resposta não é um JSON válido"],
                                 "response": response.text},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         if "edits" in resp_json and resp_json["edits"]:
             edits = [{"replacement": edit["replacement"], "sentence": edit["sentence"]} for edit in resp_json["edits"]]
             return JsonResponse({"success": True,
-                                 "message": "Frase corrigida com sucesso",
+                                 "message": ["Frase corrigida com sucesso"],
                                  "corrections": edits},
                                 status=status.HTTP_200_OK)
         else:
             return JsonResponse({"success": True,
-                                 "message": "Sem erros encontrados."},
+                                 "message": ["Sem erros encontrados."]},
                                 status=status.HTTP_200_OK)
 
     except Exception as e:
         return JsonResponse({"success": False,
-                             "error": str(e)},
+                             "error": [str(e)]},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -125,7 +125,7 @@ def get_translated_word(request):
 
             if not word:
                 return JsonResponse({'success': False,
-                                     'error': 'A palavra é obrigatória.'},
+                                     'error': ['A palavra é obrigatória.']},
                                     status=status.HTTP_404_NOT_FOUND)
 
             # Inicializa a API ReversoContextAPI
@@ -140,7 +140,7 @@ def get_translated_word(request):
             if response.status_code != 200:
                 return JsonResponse({'success': False,
                                      'error':
-                                     f"Erro na requisição: {response.status_code}"},
+                                     [f"Erro na requisição: {response.status_code}"]},
                                     status=status.HTTP_404_NOT_FOUND)
 
             try:
@@ -149,7 +149,7 @@ def get_translated_word(request):
             except ValueError:
                 return JsonResponse({'success': False,
                                      'error':
-                                     "Resposta JSON inválida ou vazia."},
+                                     ["Resposta JSON inválida ou vazia."]},
                                     status=status.HTTP_404_NOT_FOUND)
 
             # Processa traduções se houver
@@ -161,14 +161,14 @@ def get_translated_word(request):
                 })
             translations = translations[:8]
             return JsonResponse({'success': True,
-                                 "message": "Palavra traduzida",
+                                 "message": ["Palavra traduzida"],
                                 "translations": translations},
                                 status=status.HTTP_200_OK)
 
         except Exception as e:
             return JsonResponse({'success': False,
                                  'error':
-                                 f"Erro ao buscar traduções: {str(e)}"},
+                                 [f"Erro ao buscar traduções: {str(e)}"]},
                                 status=status.HTTP_404_NOT_FOUND)
 
 
