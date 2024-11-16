@@ -317,3 +317,211 @@ def create_flashcard(request, deckId):
         return JsonResponse({"success": False,
                              "error": ["Metodo não autorizado"]},
                             status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    
+
+@csrf_exempt
+@api_view(['POST'])
+def create_multiple_flashcard(request, deckId):
+    if request.method == "POST":
+        try:
+            flashcards_data = request.data.get('flashcards', [])
+            if not flashcards_data:
+                return JsonResponse({"success": False, "error": "Nenhum flashcard fornecido."},
+                                     status=status.HTTP_400_BAD_REQUEST)
+
+            for flashcard_data in flashcards_data:
+                # Extrair dados da requisição
+                keyword = request.data.get('keyword')
+                main_phrase = request.data.get('mainPhrase')
+                if not keyword:
+                    return JsonResponse({"success": False,
+                                        "error": "Palavra chave não encontrada"},
+                                        status=status.HTTP_400_BAD_REQUEST)
+                if not main_phrase:
+                    return JsonResponse({"success": False,
+                                        "error": "Frase não encontrada"},
+                                        status=status.HTTP_400_BAD_REQUEST)
+
+                token = request.headers.get('Authorization')
+                if not token:
+                    return JsonResponse({
+                        'success': False,
+                        'error':
+                        ['Token de autorização ausente. Faça login novamente.']
+                    }, status=status.HTTP_401_UNAUTHORIZED)
+
+                jwt_data = validate_jwt(token)
+                user_id = jwt_data.get('id')
+
+                # Criar o flashcard
+                flashcard_data = {
+                    "keyword": keyword,
+                    "main_phrase": main_phrase
+                }
+                flashcard_serializer = CreateFlashCardSerializer(
+                    data=flashcard_data)
+                if flashcard_serializer.is_valid():
+                    flashcard = flashcard_serializer.save()
+
+                    # Criar relação com o deck
+                    deck_flashcard = DeckFlashCard.objects.create(
+                        flashcard=flashcard,
+                        deck_id=deckId
+                    )
+
+                    # Processar exemplos
+                    examples = request.data.get('examples', [])
+                    for example_data in examples:
+                        text_example = example_data.get('textExample')
+
+                        if not text_example:
+                            return JsonResponse({"success": False,
+                                                "error": ["Exemplo inválido"]},
+                                                status=status.HTTP_400_BAD_REQUEST)
+
+                        # Tentar buscar o exemplo existente
+                        example = Example.objects.filter(
+                            text_example=text_example).first()
+
+                        if not example:
+                            example_data = {'text_example': text_example}
+                            example_serializer = ExampleCreateSerializer(
+                                data=example_data)
+
+                            if example_serializer.is_valid(raise_exception=True):
+                                example = example_serializer.save()
+                                example = Example.objects.get(
+                                    text_example=text_example)
+
+                        # Criar relação entre o exemplo e o flashcard do deck
+                        new_deck_flashcard_example = {
+                            "example": example.id,
+                            "deck_flashcard": deck_flashcard.id
+                        }
+
+                        flashcard_ex_serializer = DeckFlashcardExampleSerializer(
+                            data=new_deck_flashcard_example)
+                        if flashcard_ex_serializer.is_valid(
+                                raise_exception=True):
+                            flashcard_ex_serializer.save()
+
+                    translations = request.data.get('translations', [])
+                    for translation_data in translations:
+                        text_translation = translation_data.get('textTranslation')
+                        if not text_translation:
+                            return JsonResponse({"success": False,
+                                                "error": ["Tradução inválida"]},
+                                                status=status.HTTP_400_BAD_REQUEST)
+
+                        translation = Translation.objects.filter(
+                            text_translation=text_translation).first()
+                        if not translation:
+                            translation_data = {
+                                'text_translation': text_translation}
+                            translation_serializer = TranslationCreateSerializer(
+                                data=translation_data)
+
+                            if translation_serializer.is_valid(
+                                    raise_exception=True):
+                                translation = translation_serializer.save()
+                                translation = Translation.objects.get(
+                                    text_translation=text_translation)
+
+                        new_deck_flashcard_translation = {
+                            "translation": translation.id,
+                            "deck_flashcard": deck_flashcard.id
+                        }
+                        new = DeckFlashcardTranslationSerializer(
+                            data=new_deck_flashcard_translation)
+                        if new.is_valid():
+                            new.save()
+
+                    # Processar pronúncias
+                    pronunciations = request.data.get('pronunciations', [])
+                    for pronunciation_data in pronunciations:
+                        audio_url = pronunciation_data.get('audioUrl')
+                        country = pronunciation_data.get(
+                            'country')  # País de origem
+                        sex = pronunciation_data.get('sex')  # Sexo da voz
+                        voice_name = pronunciation_data.get(
+                            'voiceName')  # Nome da voz
+
+                        if not audio_url or not country or not sex or not voice_name:
+                            return JsonResponse({
+                                "success": False,
+                                "error": "Informações da pronúncia inválidas"},
+                                status=status.HTTP_404_NOT_FOUND)
+
+                        # Fazer o upload do áudio para o Firebase
+                        try:
+                            firebase_audio_url = upload_audio_from_url_to_firebase(
+                                audio_url, keyword, country, sex, voice_name)
+                        except Exception as e:
+                            return JsonResponse({
+                                "success": False,
+                                "error": str(e)},
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                        # Salvar a pronúncia no banco de dados
+                        pronunciation = Pronunciation.objects.filter(
+                            keyword=keyword, audio_url=firebase_audio_url).first()
+                        if not pronunciation:
+                            pronunciation = Pronunciation(
+                                keyword=keyword,
+                                audio_url=firebase_audio_url)
+                            pronunciation.save()
+                            pronunciation = Pronunciation.objects.filter(
+                                keyword=keyword,
+                                audio_url=firebase_audio_url).first()
+
+                        DeckFlashcardPronunciation.objects.create(
+                            pronunciation=pronunciation,
+                            deck_flashcard=deck_flashcard
+                        )
+
+                    img = request.data.get('images', [])
+                    for image_data in img:
+                        image_url = image_data.get('imageUrl')
+                        file_description = image_data.get('description')
+
+                        if not image_url or not file_description:
+                            return JsonResponse({"success": False,
+                                                "error": ["Imagem inválida"]})
+
+                        # Verifica se já existe uma foto com os mesmos dados
+                        photo = FlashcardPhoto.objects.filter(
+                            deck_flashcard_id=deck_flashcard.id,
+                            file_url=image_url,
+                            file_description=file_description
+                        ).first()
+
+                        # Se não encontrar, cria uma nova
+                        if not photo:
+                            image = FlashcardPhoto(
+                                deck_flashcard_id=deck_flashcard.id,
+                                file_url=image_url,
+                                file_description=file_description
+                            )
+                            image.save()
+
+                    threading.Thread(
+                        target=update_flashcard_data, args=(
+                            deckId, user_id,)).start()
+                    return JsonResponse({"success": True,
+                                        "message":
+                                         ["Flashcard criado com sucesso"]},
+                                        status=status.HTTP_201_CREATED)
+
+                return JsonResponse({"success": False,
+                                    "error": [flashcard_serializer.errors]},
+                                    status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return JsonResponse({'success': False,
+                                 'error': f'Erro: {str(e)}'},
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    else:
+        return JsonResponse({"success": False,
+                             "error": ["Metodo não autorizado"]},
+                            status=status.HTTP_405_METHOD_NOT_ALLOWED)
+

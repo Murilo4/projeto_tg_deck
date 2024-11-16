@@ -19,6 +19,7 @@ from .views.Audio.text import get_correct_word, get_correct_phrase
 from .views.Audio.audio import get_pronunciations
 from .views.Study.study import get_flashcards_for_study
 from .views.Flashcards.create_flashcard import update_flashcard_data
+from .views.Flashcards.create_flashcard import create_multiple_flashcard
 
 urlpatterns = [
 
@@ -71,6 +72,8 @@ urlpatterns = [
 
     path("get-flashcards-for-study/<int:deckId>/",
          get_flashcards_for_study, name="get_flashcards_for_study"),
+    path("create-multiple-flashcard/",
+         create_multiple_flashcard, name="create_multiple_flashcard"),
 
     # Text Paths
     path("get-translated-word/",
