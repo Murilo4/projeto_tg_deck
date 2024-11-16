@@ -169,6 +169,7 @@ class DeckFlashcardPronunciation(models.Model):
 
 
 class FlashcardPhoto(models.Model):
+    id = models.IntegerField(primary_key=True)
     deck_flashcard = models.ForeignKey(DeckFlashCard, on_delete=models.CASCADE)
     file_url = models.CharField(max_length=500)
     file_description = models.CharField(max_length=255)
