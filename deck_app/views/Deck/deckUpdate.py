@@ -133,6 +133,30 @@ def deck_update(request, deckId):
                     flashcard_id=flashcard.flashcard_id
                 )
 
+                examples = DeckFlashcardExample.objects.filter(
+                    deck_flashcard_id=flashcard.id)
+
+                translations = DeckFlashcardTranslation.objects.filter(
+                    deck_flashcard_id=flashcard.id)
+
+                pronunciations = DeckFlashcardPronunciation.objects.filter(
+                    deck_flashcard_id=flashcard.id)
+
+                for example in examples:
+                    DeckFlashcardExample.objects.create(
+                        deck_flashcard_id=new_flashcard.id,
+                        example_id=example.id)
+
+                for translation in translations:
+                    DeckFlashcardTranslation.objects.create(
+                        deck_flashcard_id=flashcard.id,
+                        translation_id=translation.id)
+
+                for pr in pronunciations:
+                    DeckFlashcardPronunciation.objects.create(
+                        deck_flashcard_id=new_flashcard.id,
+                        pronunciation_id=pr.id)
+
                 user_flashcard = UserFlashCard.objects.filter(
                     deck_flashcard_id=flashcard.id,
                     user_id=user_id).first()
@@ -140,6 +164,7 @@ def deck_update(request, deckId):
                 user_flashcards = UserFlashCard.objects.filter(
                     deck_flashcard_id=flashcard.id,
                     user_id=user_id)
+                
                 for flashcard_user in user_flashcards:
                     user_flashcard_ids.add(flashcard_user.deck_flashcard.id)
 
@@ -159,7 +184,7 @@ def deck_update(request, deckId):
                 old_user_flashcard = UserFlashCard.objects.filter(
                     deck_flashcard_id=ids)
                 old_user_flashcard.delete()
-                   
+
             serializer = PersonDeckUpdateSerializer(
                 new_deck, data=request.data, partial=True
             )
