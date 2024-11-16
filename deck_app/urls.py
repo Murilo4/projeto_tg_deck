@@ -73,7 +73,7 @@ urlpatterns = [
          get_flashcards_for_study, name="get_flashcards_for_study"),
 
     # Text Paths
-    path("get-traslated-word/",
+    path("get-translated-word/",
          get_translated_word, name="get_translated_word"),
 
     path("get-example-sentences/",

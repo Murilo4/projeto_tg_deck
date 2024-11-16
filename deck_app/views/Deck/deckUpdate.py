@@ -136,11 +136,10 @@ def deck_update(request, deckId):
                 user_flashcard = UserFlashCard.objects.filter(
                     deck_flashcard_id=flashcard.id,
                     user_id=user_id).first()
-                
+
                 user_flashcards = UserFlashCard.objects.filter(
                     deck_flashcard_id=flashcard.id,
                     user_id=user_id)
-                
                 for flashcard_user in user_flashcards:
                     user_flashcard_ids.add(flashcard_user.deck_flashcard.id)
 
@@ -160,7 +159,7 @@ def deck_update(request, deckId):
                 old_user_flashcard = UserFlashCard.objects.filter(
                     deck_flashcard_id=ids)
                 old_user_flashcard.delete()
-                                
+                   
             serializer = PersonDeckUpdateSerializer(
                 new_deck, data=request.data, partial=True
             )

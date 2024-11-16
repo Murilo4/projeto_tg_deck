@@ -91,8 +91,6 @@ def study_flashcard(request, deck_flashcard_id, user_id, star_rating):
             'success': True,
             'message':
             'Estado do flashcard e prioridade atualizados com sucesso.',
-            'new_situation': user_flashcard.situation,
-            'new_priority': new_priority
         }, status=status.HTTP_200_OK)
 
     except UserFlashCard.DoesNotExist:

@@ -6,6 +6,7 @@ from django.http import JsonResponse
 from reverso_api.context import ReversoContextAPI
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
+import os
 
 
 @csrf_exempt
@@ -39,46 +40,74 @@ HEADERS = {
 }
 
 
+# @csrf_exempt
+# @api_view(["POST"])
+# def get_correct_phrase(request):
+#     if request.method == 'POST':
+#         # Pega o texto do corpo da requisição
+#         phrase = request.data.get('phrase', '')
+
+#         # Se o texto não for vazio, verifique a gramática
+#         if phrase:
+#             corrected_text = correct_phrases(phrase)
+#             return JsonResponse({'original_text': phrase,
+#                                  'corrected_text': corrected_text})
+#         else:
+#             return JsonResponse({'success': False,
+#                                 'error': 'Nenhum texto fornecido'},
+#                                 status=status.HTTP_400_BAD_REQUEST)
+
+#     return JsonResponse({'success': False,
+#                         'error': 'Método invalido'},
+#                         status=status.HTTP_400_BAD_REQUEST)
+
 @csrf_exempt
 @api_view(["POST"])
 def get_correct_phrase(request):
-    if request.method == 'POST':
-        # Pega o texto do corpo da requisição
-        phrase = request.data.get('phrase', '')
+    phrase = request.data.get("phrase")
 
-        # Se o texto não for vazio, verifique a gramática
-        if phrase:
-            corrected_text = correct_phrases(phrase)
-            return JsonResponse({'original_text': phrase,
-                                 'corrected_text': corrected_text})
+    if not phrase:
+        return JsonResponse({"success": False,
+                             "error": "Frase não fornecida"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        response = requests.post(
+            "https://api.sapling.ai/api/v1/edits",
+            json={
+                "key": "9YR0ZM15E19MER4REN6IUNT2JUJYZ9DL",
+                "text": phrase,
+                "session_id": "test_session",
+                "language": "en",
+            }
+        )
+        if response.status_code != 200:
+            return JsonResponse({"success": False, 
+                                 "error": f"Erro {response.status_code}: {response.text}"},
+                                status=response.status_code)
+
+        try:
+            resp_json = response.json()
+        except ValueError:
+            return JsonResponse({"success": False, 
+                                 "error": "Resposta não é um JSON válido",
+                                "response": response.text}, 
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        if "edits" in resp_json and resp_json["edits"]:
+            edits = [{"replacement": edit["replacement"], "sentence": edit["sentence"]} for edit in resp_json["edits"]]
+            return JsonResponse({"success": True,
+                                 "corrections": edits},
+                                status=status.HTTP_200_OK)
         else:
-            return JsonResponse({'success': False,
-                                'error': 'Nenhum texto fornecido'},
-                                status=status.HTTP_400_BAD_REQUEST)
+            return JsonResponse({"success": True,
+                                 "message": "Sem erros encontrados."},
+                                status=status.HTTP_200_OK)
 
-    return JsonResponse({'success': False,
-                        'error': 'Método invalido'},
-                        status=status.HTTP_400_BAD_REQUEST)
-
-
-def correct_phrases(phrase):
-    url = "https://api.languagetool.org/v2/check"
-    params = {
-        'text': phrase,
-        'language': 'en'
-    }
-
-    response = requests.post(url, data=params)
-    result = response.json()
-
-    # Corrigir o texto com base nas sugestões da API
-    corrected_text = phrase
-    for match in result.get('matches', []):
-        for replacement in match['replacements']:
-            # Aplicando a primeira correção sugerida
-            corrected_text = corrected_text[:match['offset']] + replacement['value'] + corrected_text[match['offset'] + match['length']:]
-
-    return corrected_text
+    except Exception as e:
+        return JsonResponse({"success": False, 
+                             "error": str(e)}, 
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @csrf_exempt
