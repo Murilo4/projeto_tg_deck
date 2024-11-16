@@ -95,9 +95,9 @@ class Pronunciation(models.Model):
 
 
 class UserDeckPreferences(models.Model):
-    id = models.IntegerField()
+    id = models.IntegerField(primary_key=True)
     deck = models.ForeignKey(Deck, on_delete=models.CASCADE)
-    user_id = models.IntegerField(primary_key=True)
+    user_id = models.IntegerField()
     new_per_day = models.IntegerField(default=None)
     learning_per_day = models.IntegerField(default=None)
     review_per_day = models.IntegerField(default=None)

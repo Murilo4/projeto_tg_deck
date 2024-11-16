@@ -18,7 +18,7 @@ from .views.Audio.text import get_translated_word, get_example_sentences
 from .views.Audio.text import get_correct_word, get_correct_phrase
 from .views.Audio.audio import get_pronunciations
 from .views.Study.study import get_flashcards_for_study
-# from .views.Flashcards.create_flashcard import update_flashcard_data
+from .views.Flashcards.create_flashcard import update_flashcard_data
 
 urlpatterns = [
 
@@ -98,6 +98,6 @@ urlpatterns = [
     path("cron-job/",
          cron_job, name="cron_job"),
 
-     # path("update-flashcard-data/", 
-     #      update_flashcard_data, name="update_flashcard_data"),
+     path("update-flashcard-data/", 
+          update_flashcard_data, name="update_flashcard_data"),
 ]

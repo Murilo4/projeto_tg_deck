@@ -24,7 +24,7 @@ def add_deck_to_user(request, deckId):
 
             jwt_data = validate_jwt(token)
             user_id = jwt_data.get('id')
-
+            print(deck_id)
             if not deck_id:
                 return JsonResponse({'success': False,
                                     'error': ['Deck não encontrado.']},
@@ -36,6 +36,11 @@ def add_deck_to_user(request, deckId):
                 return JsonResponse({"success": False,
                                     "error": ["Deck já pertence ao usuário."]},
                                     status=status.HTTP_409_CONFLICT)
+            deck = Deck.objects.get(id=deck_id)
+            if deck.public == 0:
+                return JsonResponse({"success": False,
+                                     "error": ["Deck não é público."]},
+                                    status=status.HTTP_403_FORBIDDEN)
 
             standard_deck = Deck.objects.get(Q(id=deck_id) & (
                 Q(type_deck="Standard") | Q(type_deck="Custom")) & Q(public=1))

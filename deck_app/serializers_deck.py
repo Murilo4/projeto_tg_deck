@@ -42,12 +42,23 @@ class PersonDeckSerializer(serializers.ModelSerializer):
 
 
 class PersonDeckUpdateSerializer(serializers.ModelSerializer):
+    description = serializers.CharField(source='description_deck',
+                                        required=False)
+    color = serializers.CharField(source='color_predefinition',
+                                  required=False)
+    img = serializers.CharField(source="image",
+                                required=False)
+    copy = serializers.CharField(source="allow_copy",
+                                 required=False)
+    deckName = serializers.CharField(source="title",
+                                     required=False)
+
     class Meta:
         model = Deck
         fields = (
-            'id', 'type_deck', 'title', 'description_deck',
-            'color_predefinition', 'reviews', 'image',
-            'stars', 'public', 'allow_copy'
+            'id', 'type_deck', 'deckName', 'description',
+            'color', 'reviews', 'img',
+            'stars', 'public', 'copy'
         )
 
     def update(self, instance, validated_data):
@@ -174,3 +185,26 @@ class UDPreferencesSerializer(serializers.ModelSerializer):
     new_per_day = serializers.IntegerField(default=2)
     learning_per_day = serializers.IntegerField(default=5)
     review_per_day = serializers.IntegerField(default=2)
+
+
+class UDPreferencesUpdateSerializer(serializers.ModelSerializer):
+    new = serializers.IntegerField(source="new_per_day", 
+                                   required=False)
+    learning = serializers.IntegerField(source="learning_per_day",
+                                        required=False)
+    review = serializers.IntegerField(source="learning_per_day",
+                                      required=False)
+
+    class Meta:
+        model = UserDeckPreferences
+        fields = (
+            'deck_id', 'user_id', 'new', 'learning',
+            'review'
+        )
+
+    def update(self, instance, validated_data):
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance

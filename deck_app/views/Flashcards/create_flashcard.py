@@ -8,7 +8,7 @@ from ...serializers_flashcard import DeckFlashcardTranslationSerializer
 from ...WordAudioSerializer import ExampleCreateSerializer
 from ...WordAudioSerializer import TranslationCreateSerializer
 from ...models import UserFlashCard, FlashcardPhoto
-from ...models import DeckFlashCard # , UserDeck
+from ...models import DeckFlashCard, UserDeck, Deck
 from ...models import Pronunciation, DeckFlashcardPronunciation
 from ...validation.validation_jwt import validate_jwt
 from ...models import Example, Translation
@@ -19,43 +19,50 @@ from firebase_admin import credentials
 from django.conf import settings
 import io
 import threading
-# from django.db.models import F
 
 
-# @csrf_exempt
-# @api_view(["POST"])
-# def update_flashcard_data(request):
-#     deckId = 15
-#     user_id = 1
-#     try:
-#         # Recupera o deck_flashcard associado ao deckId e user_id
-#         deck_flashcard = DeckFlashCard.objects.get(
-#             deck_id=deckId, user=user_id)  # Aqui usamos 'user' como exemplo
-        
-#         # Filtra os flashcards do usuário associados ao deck
-#         user_flashcards = UserFlashCard.objects.filter(
-#             deck_flashcard_id=deck_flashcard.id)
-        
-#         # Loop pelos flashcards do usuário
-#         for user_flashcard in user_flashcards:
-#             if user_flashcard.situation == "New":
-#                 # Atualiza o campo 'new' com incremento de 1 usando F()
-#                 UserDeck.objects.filter(
-#                     user_id=user_id, deck_id=deckId).update(new=F('new') + 1)
-#             elif user_flashcard.situation == "Learning":
-#                 # Atualiza o campo 'learning' com incremento de 1 usando F()
-#                 UserDeck.objects.filter(
-#                     user_id=user_id, deck_id=deckId).update(learning=F('learning') + 1)
-#             elif user_flashcard.situation == "Reviewing":
-#                 # Atualiza o campo 'reviewing' com incremento de 1 usando F()
-#                 UserDeck.objects.filter(
-#                     user_id=user_id, deck_id=deckId).update(reviewing=F('reviewing') + 1)
+@csrf_exempt
+@api_view(["POST"])
+def update_flashcard_data(request):
+    deckId = 15
+    user_id = 1
+    try:
+        # Buscar o Deck com o deckId
+        user_flashcards = UserFlashCard.objects.filter(deck_flashcard__deck_id=deckId, user_id=user_id)
 
-#     except DeckFlashCard.DoesNotExist:
-#         # Caso não encontre o DeckFlashCard
-#         return JsonResponse({'success': False, 
-#                              'message': ['DeckFlashCard não encontrado']}, 
-#                              status=status.HTTP_404_NOT_FOUND)
+        # Contagem de flashcards por situação
+        count_new = user_flashcards.filter(situation="New").count()
+        count_learning = user_flashcards.filter(situation="Learning").count()
+        count_reviewing = user_flashcards.filter(situation="Reviewing").count()
+
+        # Teste: Verificar as contagens
+        print(f"Contagem de flashcards 'New': {count_new}")
+        print(f"Contagem de flashcards 'Learning': {count_learning}")
+        print(f"Contagem de flashcards 'Reviewing': {count_reviewing}")
+
+        # Buscar o UserDeck para o usuário e o deck em questão
+        user_deck, created = UserDeck.objects.get_or_create(user_id=user_id, deck_id=deckId)
+
+        # Teste: Verificar os valores existentes na tabela UserDeck
+        print(f"Valores atuais em UserDeck: new={user_deck.new}, learning={user_deck.learning}, reviewing={user_deck.reviewing}")
+
+        # Atualizar os campos new, learning, reviewing no UserDeck com base nas contagens de UserFlashCard
+        user_deck.new = count_new
+        user_deck.learning = count_learning
+        user_deck.reviewing = count_reviewing
+
+        # Salvar as alterações no UserDeck
+        user_deck.save()
+
+        # Retornar resposta de sucesso após a atualização
+        return JsonResponse({"success": True, "message": ["Flashcard data updated successfully."]}, status=200)
+
+    except Deck.DoesNotExist:
+        # Caso o Deck não seja encontrado
+        return JsonResponse({"success": False, "message": ["Deck not found."]}, status=404)
+    except Exception as e:
+        # Caso ocorra algum erro inesperado
+        return JsonResponse({"success": False, "message": [f"An error occurred: {str(e)}"]}, status=500)
 
 
 def initialize_firebase():
@@ -294,7 +301,7 @@ def create_flashcard(request, deckId):
                         )
                         image.save()
 
-                #threading.Thread(target=update_flashcard_data, args=(deckId, user_id,)).start()
+                threading.Thread(target=update_flashcard_data, args=(deckId, user_id,)).start()
                 return JsonResponse({"success": True,
                                      "message":
                                     ["Flashcard criado com sucesso"]},

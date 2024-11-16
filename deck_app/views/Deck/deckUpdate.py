@@ -2,6 +2,7 @@ from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from rest_framework import exceptions
 from ...serializers_deck import PersonDeckUpdateSerializer
+from ...serializers_deck import UDPreferencesUpdateSerializer
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from ...models import Deck, UserDeck, DeckFlashCard, UserFlashCard
@@ -59,6 +60,16 @@ def deck_update(request, deckId):
                 )
                 if serializer.is_valid():
                     serializer.save()
+                    preferences = UserDeckPreferences.objects.get(
+                        user_id=user_id, deck_id=deck_id)
+                    
+                    user_deck = UDPreferencesUpdateSerializer(
+                        preferences,
+                        data=request.data,
+                        partial=True)
+                    if user_deck.is_valid():
+                        user_deck.save()
+
                     return JsonResponse({
                         'success': True,
                         'message': 'Deck atualizado'
@@ -85,12 +96,14 @@ def deck_update(request, deckId):
                     deck_id=new_deck.id,
                     new=old_user_deck.new,
                     learning=old_user_deck.learning,
-                    review=old_user_deck.review,
+                    reviewing=old_user_deck.reviewing,
                     favorite=old_user_deck.favorite
                 )
 
                 old_preferences = UserDeckPreferences.objects.filter(
                     deck_id=deck_id, user_id=user_id).first()
+                old_preferences.delete()
+
                 UserDeckPreferences.objects.create(
                     deck_id=new_deck.id, user_id=user_id,
                     new_per_day=old_preferences.new_per_day,
