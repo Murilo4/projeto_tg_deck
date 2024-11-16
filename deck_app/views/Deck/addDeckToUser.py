@@ -24,7 +24,7 @@ def add_deck_to_user(request, deckId):
 
             jwt_data = validate_jwt(token)
             user_id = jwt_data.get('id')
-            print(deck_id)
+
             if not deck_id:
                 return JsonResponse({'success': False,
                                     'error': ['Deck não encontrado.']},
