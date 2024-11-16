@@ -7,6 +7,7 @@ from reverso_api.context import ReversoContextAPI
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status
 import os
+import re
 
 
 @csrf_exempt
@@ -201,7 +202,6 @@ def get_example_sentences(request):
 
             # Tenta carregar o conteúdo JSON
             try:
-                # Certifique-se de acessar a chave correta
                 examples_json = response.json().get("list", [])
             except ValueError:
                 return JsonResponse({'success': False,
@@ -212,9 +212,12 @@ def get_example_sentences(request):
             # Processa exemplos se houver
             examples = []
             for example in examples_json:
-                examples.append({
-                    "sourceSentence": example.get("s_text")
-                })
+                source_sentence = example.get("s_text")
+                if source_sentence:
+                    cleaned_sentence = remove_html_tags(source_sentence)  # Remove as tags HTML
+                    examples.append({
+                        "sourceSentence": cleaned_sentence
+                    })
 
             if not examples:
                 return JsonResponse({'success': False,
@@ -230,3 +233,7 @@ def get_example_sentences(request):
             return JsonResponse({'success': False,
                                  'error': f"Erro ao buscar frases: {str(e)}"},
                                 status=status.HTTP_404_NOT_FOUND)
+
+
+def remove_html_tags(text):
+    return re.sub(r'<.*?>', '', text)  # Usando regex para remover tags HTML
