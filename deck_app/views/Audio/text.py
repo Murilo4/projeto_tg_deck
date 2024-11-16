@@ -213,7 +213,7 @@ def get_example_sentences(request):
             examples = []
             for example in examples_json:
                 examples.append({
-                    "source_sentence": example.get("s_text")
+                    "sourceSentence": example.get("s_text")
                 })
 
             if not examples:
