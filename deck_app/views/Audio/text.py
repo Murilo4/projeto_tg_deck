@@ -156,7 +156,7 @@ def get_translated_word(request):
             translations = []
             for translation in translations_json:
                 translations.append({
-                    "source_word": translation.get("term"),
+                    "sourceWord": translation.get("term"),
                     "translation": translation.get("alignFreq")
                 })
             translations = translations[:8]
