@@ -16,18 +16,22 @@ def get_correct_word(request):
 
     if not word:
         return JsonResponse({'success': False,
-                             'error': 'Texto é obrigatório.'})
+                             'error': 'Texto é obrigatório.'},
+                            status=status.HTTP_404_NOT_FOUND)
 
     try:
         blob = Word(word)
         corrected_text = str(blob.correct())
         if corrected_text == word:
             return JsonResponse({'success': True,
-                                 'message': 'Nenhuma mudança necessária.'})
+                                 'message': 'Nenhuma mudança necessária.'},
+                                status=status.HTTP_200_OK)
         else:
             corrected_text = blob.spellcheck()
             return JsonResponse({'success': True,
-                                 'correctedText': corrected_text})
+                                 'message': "correções sugeridas",
+                                 'correctedText': corrected_text},
+                                status=status.HTTP_200_OK)
     except Exception as e:
         return JsonResponse({'success': False,
                              'error': f"Erro: {str(e)}"},
@@ -65,7 +69,6 @@ HEADERS = {
 @api_view(["POST"])
 def get_correct_phrase(request):
     phrase = request.data.get("phrase")
-
     if not phrase:
         return JsonResponse({"success": False,
                              "error": "Frase não fornecida"},
@@ -89,14 +92,15 @@ def get_correct_phrase(request):
         try:
             resp_json = response.json()
         except ValueError:
-            return JsonResponse({"success": False, 
+            return JsonResponse({"success": False,
                                  "error": "Resposta não é um JSON válido",
-                                "response": response.text}, 
+                                "response": response.text},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         if "edits" in resp_json and resp_json["edits"]:
             edits = [{"replacement": edit["replacement"], "sentence": edit["sentence"]} for edit in resp_json["edits"]]
             return JsonResponse({"success": True,
+                                 "message": "Frase corrigida com sucesso",
                                  "corrections": edits},
                                 status=status.HTTP_200_OK)
         else:
@@ -105,8 +109,8 @@ def get_correct_phrase(request):
                                 status=status.HTTP_200_OK)
 
     except Exception as e:
-        return JsonResponse({"success": False, 
-                             "error": str(e)}, 
+        return JsonResponse({"success": False,
+                             "error": str(e)},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
