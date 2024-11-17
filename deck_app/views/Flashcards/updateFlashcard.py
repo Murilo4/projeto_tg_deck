@@ -324,8 +324,7 @@ def update_flashcard_data(flashcard, data):
             serializer_flashcard.save()
             return True
         else:
-            raise ValidationError(f"Erro de validação: {
-                                  serializer_flashcard.errors}")
+            raise ValidationError(f"Erro de validação: {serializer_flashcard.errors}")
 
     except Exception as e:
         # Caso ocorra um erro ao salvar, lança uma exceção
