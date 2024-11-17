@@ -12,49 +12,6 @@ from .create_flashcard import upload_audio_from_url_to_firebase
 from rest_framework.exceptions import ValidationError
 
 
-def update_pronunciations(deck_flashcard, pronunciations_data):
-    for pronunciation_data in pronunciations_data:
-        # Obter dados enviados pelo cliente
-        keyword = pronunciation_data.get("keyword")
-        audio_url = pronunciation_data.get("audioUrl")
-        country = pronunciation_data.get("country")
-        sex = pronunciation_data.get("sex")
-        voice_name = pronunciation_data.get("voiceName")
-
-        # Validação dos campos necessários
-        if not all([keyword, audio_url, country, sex, voice_name]):
-            raise ValueError("Dados inválidos fornecidos para a pronúncia.")
-
-        # Fazer o upload do áudio para o Firebase
-        try:
-            firebase_audio_url = upload_audio_from_url_to_firebase(
-                audio_url, keyword, country, sex, voice_name
-            )
-        except Exception as e:
-            raise Exception(f"Erro ao fazer upload para o Firebase: {str(e)}")
-
-        # Buscar ou criar a pronúncia no banco de dados
-        pronunciation, created = Pronunciation.objects.get_or_create(
-            keyword=keyword,
-            audio_url=firebase_audio_url,
-        )
-
-        if created:
-            # Relacionar a pronúncia ao flashcard se for nova
-            DeckFlashcardPronunciation.objects.create(
-                pronunciation=pronunciation,
-                deck_flashcard=deck_flashcard,
-            )
-        else:
-            # Atualizar o relacionamento caso já exista
-            DeckFlashcardPronunciation.objects.filter(
-                pronunciation=pronunciation, deck_flashcard=deck_flashcard
-            ).update(
-                pronunciation=pronunciation,
-                deck_flashcard=deck_flashcard,
-            )
-
-
 @csrf_exempt
 @api_view(['PUT'])
 def update_flashcard(request, flashcardId, deckId):
@@ -104,7 +61,8 @@ def update_flashcard(request, flashcardId, deckId):
                         user_flashcard_id=old_user_flashcard.id,
                         user_id=user_id).first()
                     old_flashcard_priority_id = old_flashcard_priority.id
-                    new_flashcard = FlashCard.objects.create(**{field.name: getattr(flashcard, field.name) for field in FlashCard._meta.fields if field.name != 'id'})
+                    new_flashcard = FlashCard.objects.create(
+                        **{field.name: getattr(flashcard, field.name) for field in FlashCard._meta.fields if field.name != 'id'})
 
                     serializer_deck_flashcard = DeckFlashCard.objects.create(
                         flashcard=new_flashcard, deck=deck_flashcard.deck)
@@ -124,7 +82,7 @@ def update_flashcard(request, flashcardId, deckId):
                         user_id=user_id,
                         priority=old_flashcard_priority.priority,
                         date_to_study=old_flashcard_priority.date_to_study
-                        )
+                    )
 
                     UserFlashCard.objects.filter(
                         id=old_user_flashcard_id).delete()
@@ -149,10 +107,6 @@ def update_flashcard(request, flashcardId, deckId):
                 img_ids_to_keep, img_ids_to_add = process_img(
                     request.data.get('images', []), deck_flashcard)
 
-                if img_ids_to_keep or img_ids_to_add is None:
-                    img_ids_to_keep, img_ids_to_add = [], []
-
-                # Criação de novos exemplos
                 if new_examples:
                     Example.objects.bulk_create(new_examples)
                     for new_example in new_examples:
@@ -162,15 +116,6 @@ def update_flashcard(request, flashcardId, deckId):
                             existing_examples.add(existing_example.id)
                             exist_example.add(existing_example.id)
 
-                if new_prs:
-                    try:
-                        
-                        update_pronunciations(deck_flashcard, new_prs)
-                    except ValueError as ve:
-                        return JsonResponse({"success": False, "error": str(ve)}, status=400)
-                    except Exception as e:
-                        return JsonResponse({"success": False, "error": str(e)}, status=500)
-                
                 if new_trs:
                     Translation.objects.bulk_create(new_trs)
                     for new_tr in new_trs:
@@ -179,18 +124,6 @@ def update_flashcard(request, flashcardId, deckId):
                         if existing_trs:
                             existing_tr.add(existing_trs.id)
                             tr_exist_ids.add(existing_trs.id)
-
-                # Criação de novas imagens
-                if img_ids_to_add:
-                    FlashcardPhoto.objects.bulk_create(
-                        img_ids_to_add)
-                    for image in img_ids_to_add:
-                        existing_img = FlashcardPhoto.objects.filter(
-                            file_url=image.file_url).first()
-                        if existing_img:
-                            img_ids_to_keep.add(
-                                existing_img.file_url)
-
                 if existing_pr:
                     link_pr_to_deck_flashcard(
                         existing_pr, deck_flashcard)
@@ -224,7 +157,7 @@ def update_flashcard(request, flashcardId, deckId):
                                 status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return JsonResponse({'success': False,
-                                 'error': f'Erro: {str(e)}'}, 
+                                 'error': f'Erro: {str(e)}'},
                                 status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
         return JsonResponse({"success": False,
@@ -236,30 +169,32 @@ def remove_old_examples(deck_flashcard, exist_ids):
     current_example_ids = DeckFlashcardExample.objects.filter(
         deck_flashcard=deck_flashcard).values_list('example_id', flat=True)
 
-    examples_to_remove = set(current_example_ids) - exist_ids
+    examples_to_remove = set(current_example_ids) - set(exist_ids)
 
     DeckFlashcardExample.objects.filter(
         example_id__in=examples_to_remove,
         deck_flashcard=deck_flashcard).delete()
 
 
-def remove_old_pr(deck_flashcard, exist_pr):
+def remove_old_pr(deck_flashcard, exist_pr_ids):
+    """Remove as relações intermediárias antigas de pronunciations que não estão mais presentes."""
     current_pr_ids = DeckFlashcardPronunciation.objects.filter(
-        deck_flashcard=deck_flashcard).values_list(
-            'pronunciation_id', flat=True)
+        deck_flashcard=deck_flashcard).values_list('pronunciation_id', flat=True)
 
-    examples_to_remove = set(current_pr_ids) - exist_pr
+    # Encontrar as relações para remover (que não estão mais presentes)
+    pr_to_remove = set(current_pr_ids) - set(exist_pr_ids)
 
-    DeckFlashcardPronunciation.objects.filter(
-        pronunciation_id__in=examples_to_remove,
-        deck_flashcard=deck_flashcard).delete()
+    if pr_to_remove:
+        DeckFlashcardPronunciation.objects.filter(
+            pronunciation_id__in=pr_to_remove,
+            deck_flashcard=deck_flashcard).delete()
 
 
 def remove_old_tr(deck_flashcard, exist_tr_ids):
     current_tr_ids = DeckFlashcardTranslation.objects.filter(
         deck_flashcard=deck_flashcard).values_list(
             'translation_id', flat=True)
-    tr_to_remove = set(current_tr_ids) - exist_tr_ids
+    tr_to_remove = set(current_tr_ids) - set(exist_tr_ids)
     DeckFlashcardTranslation.objects.filter(
         translation_id__in=tr_to_remove,
         deck_flashcard=deck_flashcard).delete()
@@ -269,47 +204,67 @@ def remove_old_img(deck_flashcard, exist_img_urls):
     current_img_urls = FlashcardPhoto.objects.filter(
         deck_flashcard=deck_flashcard
     ).values_list('file_url', flat=True)
-
-    img_to_remove = set(current_img_urls) - exist_img_urls
-    FlashcardPhoto.objects.filter(
-        file_url__in=img_to_remove, 
-        deck_flashcard=deck_flashcard).delete()
+    print(exist_img_urls)
+    print(current_img_urls)
+    img_to_remove = set(current_img_urls) - set(exist_img_urls)
+    print(img_to_remove)
+    if img_to_remove:
+        FlashcardPhoto.objects.filter(
+            file_url__in=img_to_remove,
+            deck_flashcard=deck_flashcard).delete()
 
 
 def process_img(existing_images, deck_flashcard):
     img_ids_to_keep = set()
     img_ids_to_add = []
-    for images_data in existing_images:
-        img_id = images_data.get('id')
-        img_url = images_data.get('imageUrl')
-        img_description = images_data.get('description', "")
 
-    if img_id and img_id != 0:
-        img = FlashcardPhoto.objects.filter(
-            file_url=img_url,
-            file_description=img_description).first()
-        if img:
-            img_ids_to_keep.add(img.file_url)
-        else:
-            img_ids_to_add.append(FlashcardPhoto(
-                deck_flashcard_id=deck_flashcard.id,
+    for image_data in existing_images:
+        img_id = image_data.get('id')
+        img_url = image_data.get('imageUrl')
+        img_description = image_data.get('description', "")
+
+        # Caso o 'id' seja válido e não seja 0
+        if img_id and img_id != 0:
+            img = FlashcardPhoto.objects.filter(
                 file_url=img_url,
-                file_description=img_description
-            ))
-    else:
-        img = FlashcardPhoto.objects.filter(
-            file_url=img_url,
-            file_description=img_description).first()
-        if img:
-            img_ids_to_keep.add(img.file_url)
+                file_description=img_description).first()
+
+            if img:
+                # Se a imagem já existe, adiciona a URL ao conjunto de imagens a manter
+                img_ids_to_keep.add(img.file_url)
+            else:
+                # Caso contrário, adiciona a imagem para ser criada
+                img_ids_to_add.append(FlashcardPhoto(
+                    deck_flashcard_id=deck_flashcard.id,
+                    file_url=img_url,
+                    file_description=img_description
+                ))
         else:
-            img_ids_to_add.append(FlashcardPhoto(
-                deck_flashcard_id=deck_flashcard.id,
+            # Se não for um 'id' válido, ainda verificamos se a imagem já existe
+            img = FlashcardPhoto.objects.filter(
                 file_url=img_url,
-                file_description=img_description
-            ))
-    FlashcardPhoto.objects.bulk_create(img_ids_to_add)
-    
+                file_description=img_description).first()
+            if img:
+                img_ids_to_keep.add(img.file_url)
+            else:
+                img_ids_to_add.append(FlashcardPhoto(
+                    deck_flashcard_id=deck_flashcard.id,
+                    file_url=img_url,
+                    file_description=img_description
+                ))
+
+    # Cria as imagens em massa (bulk_create), evitando duplicações
+    if img_ids_to_add:
+        FlashcardPhoto.objects.bulk_create(img_ids_to_add)
+
+        # Depois de criar as imagens, adiciona suas URLs ao conjunto de imagens a manter
+        for image in img_ids_to_add:
+            existing_img = FlashcardPhoto.objects.filter(
+                file_url=image.file_url).first()
+            if existing_img:
+                print(existing_img.file_url)
+                img_ids_to_keep.add(existing_img.file_url)
+    print(img_ids_to_keep)
     return img_ids_to_keep, img_ids_to_add
 
 
@@ -342,12 +297,14 @@ def update_flashcard_data(flashcard, data):
     keyword = data.get('keyword')
 
     if not main_phrase and not keyword:
-        raise ValidationError("É necessário fornecer 'mainPhrase' ou 'keyword'.")
+        raise ValidationError(
+            "É necessário fornecer 'mainPhrase' ou 'keyword'.")
 
     if keyword and main_phrase:
         pattern = r'\b' + re.escape(keyword) + r'\b'
         if not re.search(pattern, main_phrase):
-            raise ValidationError(f"A keyword '{keyword}' não está presente na frase principal.")
+            raise ValidationError(
+                f"A keyword '{keyword}' não está presente na frase principal.")
 
     flashcard_data = {}
 
@@ -367,7 +324,8 @@ def update_flashcard_data(flashcard, data):
             serializer_flashcard.save()
             return True
         else:
-            raise ValidationError(f"Erro de validação: {serializer_flashcard.errors}")
+            raise ValidationError(f"Erro de validação: {
+                                  serializer_flashcard.errors}")
 
     except Exception as e:
         # Caso ocorra um erro ao salvar, lança uma exceção
@@ -474,37 +432,63 @@ def process_pr(pr_data, deck_flashcard):
         pr_id = pronunciation_data.get('id')
         pr_text = pronunciation_data.get('keyword')
         pr_link = pronunciation_data.get('audioUrl')
-        # country = pronunciation_data.get('country')
-        # sex = pronunciation_data.get('sex')
-        # voice_name = pronunciation_data.get('voiceName')
+        country = pronunciation_data.get('country')
+        sex = pronunciation_data.get('sex')
+        voice_name = pronunciation_data.get('voiceName')
 
         if pr_id and pr_id != 0:
+            # Se já existe um ID de pronúncia fornecido, tentamos associá-lo
             existing_pr = Pronunciation.objects.filter(id=pr_id).first()
             if existing_pr:
                 verify = DeckFlashcardPronunciation.objects.filter(
                     pronunciation_id=existing_pr.id,
                     deck_flashcard_id=deck_flashcard.id)
                 if not verify.exists():
+                    # Adiciona o ID da pronúncia existente
                     existing_pr_ids.add(existing_pr.id)
                     pr_exist_ids.add(existing_pr.id)
-                if verify.exists():
-                    pr_exist_ids.add(existing_pr.id)
         else:
+            # Caso contrário, verificamos se a combinação de 'keyword' e 'audio_url' já existe
             pr_exist = Pronunciation.objects.filter(
                 keyword=pr_text,
                 audio_url=pr_link).first()
+
             if pr_exist:
+                # Se a pronúncia já existir, associamos ao deck
                 verify = DeckFlashcardPronunciation.objects.filter(
                     pronunciation_id=pr_exist.id,
                     deck_flashcard_id=deck_flashcard.id)
                 if not verify.exists():
+                    # Adiciona a pronúncia existente
                     existing_pr_ids.add(pr_exist.id)
                     pr_exist_ids.add(pr_exist.id)
-                if verify.exists():
-                    pr_exist_ids.add(pr_exist.id)
             else:
-                new_prs.append(Pronunciation(keyword=pr_text,
-                                             audio_url=pr_link))
+                # Se a pronúncia não existir, precisamos fazer o upload do áudio para o Firebase
+                try:
+                    # Realiza o upload do áudio no Firebase
+                    firebase_audio_url = upload_audio_from_url_to_firebase(
+                        pr_link, pr_text, country, sex, voice_name)
+                    # Agora criamos a pronúncia com o novo áudio no Firebase
+                    new_pr = Pronunciation(
+                        keyword=pr_text,
+                        audio_url=firebase_audio_url,
+                    )
+                    new_pr.save()
+
+                    created_pr = Pronunciation.objects.filter(
+                        keyword=pr_text,
+                        audio_url=firebase_audio_url).first()
+
+                    existing_pr_ids.add(created_pr.id)
+                    pr_exist_ids.add(created_pr.id)
+
+                    # Adiciona à lista de novas pronúncias
+                    new_prs.append(new_pr)
+
+                except Exception as e:
+                    # Caso ocorra um erro ao fazer o upload ou salvar, retorna a exceção
+                    raise ValidationError(
+                        f"Erro ao salvar pronúncia: {str(e)}")
 
     return existing_pr_ids, new_prs, pr_exist_ids
 
@@ -530,6 +514,12 @@ def link_tr_to_deck_flashcard(existing_tr, deck_flashcard):
 def link_pr_to_deck_flashcard(existing_pr_ids, deck_flashcard):
     for pr_id in existing_pr_ids:
         pr = Pronunciation.objects.get(id=pr_id)
-        DeckFlashcardPronunciation.objects.create(
+
+        # Verifica se a relação já existe, caso contrário cria
+        exist = DeckFlashcardPronunciation.objects.filter(
             deck_flashcard=deck_flashcard,
-            pronunciation=pr)
+            pronunciation_id=pr_id).exists()
+        if not exist:
+            DeckFlashcardPronunciation.objects.create(
+                deck_flashcard=deck_flashcard,
+                pronunciation=pr)

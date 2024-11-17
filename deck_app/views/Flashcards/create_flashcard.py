@@ -103,7 +103,7 @@ def upload_audio_from_url_to_firebase(
         audio_data = io.BytesIO(response.content)
 
         try:
-            blob.upload_from_file(audio_data, content_type="audio/mp3")
+            blob.upload_from_file(audio_data, content_type="audio/mpeg")
             audio_url = blob.public_url
             return audio_url
         except Exception:
