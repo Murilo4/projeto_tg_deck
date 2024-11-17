@@ -96,7 +96,6 @@ def upload_audio_from_url_to_firebase(
 
         folder_path = "pronunciations/"
         file_path = f"{folder_path}{filename}"
-        print(f"Arquivo será salvo em: {file_path}")
 
         blob = bucket.blob(file_path)
 
@@ -104,7 +103,10 @@ def upload_audio_from_url_to_firebase(
 
         try:
             blob.upload_from_file(audio_data, content_type="audio/mpeg")
+            blob.make_public()
+
             audio_url = blob.public_url
+
             return audio_url
         except Exception:
             raise Exception("falha ao buscar os arquivos")
