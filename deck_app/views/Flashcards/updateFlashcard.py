@@ -220,8 +220,8 @@ def process_img(existing_images, deck_flashcard):
 
     for image_data in existing_images:
         img_id = image_data.get('id')
-        img_url = image_data.get('imageUrl')
-        img_description = image_data.get('description', "")
+        img_url = image_data.get('fileUrl')
+        img_description = image_data.get('description', None)
 
         # Caso o 'id' seja válido e não seja 0
         if img_id and img_id != 0:
@@ -266,30 +266,6 @@ def process_img(existing_images, deck_flashcard):
                 img_ids_to_keep.add(existing_img.file_url)
     print(img_ids_to_keep)
     return img_ids_to_keep, img_ids_to_add
-
-
-# def update_flashcard_data(flashcard, data):
-    """Update flashcard data from request."""
-    if 'flashcard' in data:
-        flashcard_data = data['flashcard']
-        flashcard_data['main_phrase'] = flashcard_data.pop('mainPhrase', None)
-
-        # Obtém a keyword e a main_phrase
-        keyword = flashcard_data.get('keyword')
-        main_phrase = flashcard_data.get('main_phrase', '')
-
-        if keyword:
-            pattern = r'\b' + re.escape(keyword) + r'\b'
-            if not re.search(pattern, main_phrase):
-                return False
-
-        # Cria o serializer e valida os dados
-        serializer_flashcard = FlashCardGetSerializer(
-            flashcard, data=flashcard_data, partial=True)
-
-        if serializer_flashcard.is_valid():
-            serializer_flashcard.save()
-            return True  # Retorna True se a atualização foi bem-sucedida
 
 
 def update_flashcard_data(flashcard, data):

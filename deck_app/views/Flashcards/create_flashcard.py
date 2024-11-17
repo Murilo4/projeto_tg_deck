@@ -252,7 +252,11 @@ def create_flashcard(request, deckId):
                                 "error": "Informações da pronúncia inválidas"},
                                 status=status.HTTP_404_NOT_FOUND)
 
-                        # Fazer o upload do áudio para o Firebase
+                        if not keyword:
+                            return JsonResponse({"success": False,
+                                                 "error": ["Palavra-chave não encontrada"]},
+                                                status=status.HTTP_404_NOT_FOUND)
+
                         try:
                             firebase_audio_url = upload_audio_from_url_to_firebase(
                                 audio_url, keyword, country, sex, voice_name)
