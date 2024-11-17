@@ -94,20 +94,24 @@ def delete_examples(deck_flashcard):
             more_one_example = DeckFlashcardExample.objects.filter(
                 example_id=example.example_id).count() > 1
             if more_one_example:
-                dlt_deck_flashcard_example = DeckFlashcardExample.objects.get(
-                    example_id=example.example_id)
-                dlt_deck_flashcard_example.delete()
+                dlt_deck_flashcard_example = DeckFlashcardExample.objects.filter(
+                    example_id=example.example_id).first()
+                if dlt_deck_flashcard_example:
+                    dlt_deck_flashcard_example.delete()
             else:
-                dlt_deck_flashcard_example = DeckFlashcardExample.objects.get(
-                    example_id=example.example_id)
-                delete_example = Example.objects.get(
-                    id=example.example_id)
-                dlt_deck_flashcard_example.delete()
-                delete_example.delete()
+                dlt_deck_flashcard_example = DeckFlashcardExample.objects.filter(
+                    example_id=example.example_id).first()
+                if dlt_deck_flashcard_example:
+                    dlt_deck_flashcard_example.delete()
+                    delete_example = Example.objects.filter(id=example.example_id).first()
+                    if delete_example:
+                        delete_example.delete()
+        deleted_examples = True
+        return deleted_examples
+
     except exceptions.NotFound:
+        # Caso ocorra um erro ou não encontre o objeto esperado
         return False
-    deleted_examples = True
-    return deleted_examples
 
 
 def delete_translation(deck_flashcard):
@@ -118,18 +122,21 @@ def delete_translation(deck_flashcard):
             more_one_translation = DeckFlashcardTranslation.objects.filter(
                 translation_id=translation.translation_id).count() > 1
             if more_one_translation:
-                dlt_deck_flashcard_tr = DeckFlashcardTranslation.objects.get(
+                dlt_deck_flashcard_tr = DeckFlashcardTranslation.objects.filter(
                     translation_id=translation.translation_id,
-                    deck_flashcard_id=deck_flashcard.id)
-                dlt_deck_flashcard_tr.delete()
+                    deck_flashcard_id=deck_flashcard.id).first()
+                if dlt_deck_flashcard_tr:
+                    dlt_deck_flashcard_tr.delete()
             else:
-                dlt_deck_flashcard_tr = DeckFlashcardTranslation.objects.get(
+                dlt_deck_flashcard_tr = DeckFlashcardTranslation.objects.filter(
                     translation_id=translation.translation_id,
-                    deck_flashcard_id=deck_flashcard.id)
-                delete_tr = Translation.objects.get(
-                    id=translation.translation_id)
-                dlt_deck_flashcard_tr.delete()
-                delete_tr.delete()
+                    deck_flashcard_id=deck_flashcard.id).first()
+                if dlt_deck_flashcard_tr:
+                    delete_tr = Translation.objects.filter(
+                        id=translation.translation_id).first()
+                    if delete_tr:
+                        dlt_deck_flashcard_tr.delete()
+                        delete_tr.delete()
         deleted_translation = True
         return deleted_translation
     except exceptions.NotFound:
@@ -145,16 +152,19 @@ def delete_pronunciation(deck_flashcard):
             more_one_audio = DeckFlashcardPronunciation.objects.filter(
                 pronunciation_id=audio.pronunciation_id).count() > 1
             if more_one_audio:
-                delete_deck_pr = DeckFlashcardPronunciation.objects.get(
-                    pronunciation_id=audio.id)
-                delete_deck_pr.delete()
+                delete_deck_pr = DeckFlashcardPronunciation.objects.filter(
+                    pronunciation_id=audio.id).first()
+                if delete_deck_pr:
+                    delete_deck_pr.delete()
             else:
-                delete_deck_pr = DeckFlashcardPronunciation.objects.get(
-                    pronunciation_id=audio.pronunciation_id)
-                delete_deck_pr.delete()
-                delete_pr = Pronunciation.objects.get(
-                    id=audio.pronunciation_id)
-                delete_pr.delete()
+                delete_deck_pr = DeckFlashcardPronunciation.objects.filter(
+                    pronunciation_id=audio.pronunciation_id).first()
+                if delete_deck_pr:
+                    delete_deck_pr.delete()
+                delete_pr = Pronunciation.objects.filter(
+                    id=audio.pronunciation_id).first()
+                if delete_pr:
+                    delete_pr.delete()
         deleted_translation = True
         return deleted_translation
     except exceptions.NotFound:
