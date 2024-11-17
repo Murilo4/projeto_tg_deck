@@ -389,7 +389,7 @@ def process_tr(tr_data, deck_flashcard):
 
 
 def process_pr(pr_data, deck_flashcard):
-    existing_pr_ids = set()
+    exists = set()
     pr_exist_ids = set()
     new_prs = []
 
@@ -411,7 +411,9 @@ def process_pr(pr_data, deck_flashcard):
                     DeckFlashcardPronunciation.objects.create(
                         deck_flashcard=deck_flashcard,
                         pronunciation=existing_pr)
-                existing_pr_ids.add(existing_pr.id)
+                if verify.exists():
+                    exists.add(existing_pr.id)
+                    pr_exist_ids.add(existing_pr.id)
         else:
             pr_exist = Pronunciation.objects.filter(
                 keyword=pr_text,
@@ -422,8 +424,11 @@ def process_pr(pr_data, deck_flashcard):
                     pronunciation_id=pr_exist.id,
                     deck_flashcard_id=deck_flashcard)
                 if not verify.exists():
-                    existing_pr_ids.add(pr_exist.id)
+                    exists.add(pr_exist.id)
                     pr_exist_ids.add(pr_exist.id)
+                if verify.exists():
+                    exists.add(existing_pr.id)
+                    pr_exist_ids.add(existing_pr.id)
             else:
                 try:
                     firebase_audio_url = upload_audio_from_url_to_firebase(
@@ -439,7 +444,7 @@ def process_pr(pr_data, deck_flashcard):
                         keyword=pr_text,
                         audio_url=firebase_audio_url).first()
 
-                    existing_pr_ids.add(created_pr.id)
+                    exists.add(created_pr.id)
                     pr_exist_ids.add(created_pr.id)
 
                     new_prs.append(new_pr)
@@ -448,7 +453,7 @@ def process_pr(pr_data, deck_flashcard):
                     raise ValidationError(
                         f"Erro ao salvar pronúncia: {str(e)}")
 
-    return existing_pr_ids, new_prs, pr_exist_ids
+    return exists, new_prs, pr_exist_ids
 
 
 def link_examples_to_deck_flashcard(existing_example_ids, deck_flashcard):
