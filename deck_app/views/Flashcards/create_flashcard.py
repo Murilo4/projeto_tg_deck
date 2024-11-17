@@ -139,6 +139,12 @@ def create_flashcard(request, deckId):
 
             jwt_data = validate_jwt(token)
             user_id = jwt_data.get('id')
+
+            if not user_id:
+                return JsonResponse({"success": False,
+                                    "error": "Usuario não encontrado"},
+                                    status=status.HTTP_401_UNAUTHORIZED)
+
             with transaction.atomic():
                 # Criar o flashcard
                 flashcard_data = {

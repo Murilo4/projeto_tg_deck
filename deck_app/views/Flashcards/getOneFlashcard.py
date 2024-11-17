@@ -4,7 +4,7 @@ from ...serializers_flashcard import FlashCardGetOneSerializer
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from ...models import DeckFlashCard
-from ...models import FlashCard, DeckFlashcardExample
+from ...models import FlashCard, DeckFlashcardExample, FlashcardPhoto
 from ...models import DeckFlashcardTranslation, DeckFlashcardPronunciation
 from django.core.cache import cache
 
@@ -36,6 +36,12 @@ def get_one_flashcard(request, flashcardId, deckId):
                 deck_flashcard=deck_flashcard).select_related('translation')
             translations_data = [{'id': tr.translation.id,
                                   'textTranslation': tr.translation.text_translation} for tr in translations] if translations.exists() else []
+            
+            images = FlashcardPhoto.objects.filter(
+                deck_flashcard=deck_flashcard)
+            image_data = [{'id': img.id,
+                    'fileUrl': img.file_url,
+                    'fileDescription': img.file_description} for img in images] if images.exists() else []
 
             # flashcard_data = {
             #         "flashcard": {
@@ -53,10 +59,12 @@ def get_one_flashcard(request, flashcardId, deckId):
                 'examples': example_data,
                 'translations': translations_data,
                 'pronunciations': pronunciation_data,
+                'images': image_data
             }
 
             return JsonResponse({
                 'success': True,
+                "message": "flashcard retornado com sucesso",
                 'flashcard': [response_data]
             }, status=status.HTTP_200_OK)
 
