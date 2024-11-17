@@ -8,6 +8,7 @@ from ...models import Example, Translation, Pronunciation, FlashcardPhoto, Flash
 from ...validation.validation_jwt import validate_jwt
 from django.db import transaction
 import re
+from django.core.cache import cache
 
 
 @csrf_exempt
@@ -175,8 +176,154 @@ def remove_old_tr(deck_flashcard, exist_tr_ids):
     DeckFlashcardTranslation.objects.filter(
         translation_id__in=tr_to_remove,
         deck_flashcard=deck_flashcard).delete()
+    
+
+# @csrf_exempt
+# @api_view(['PUT'])
+# def update_flashcard(request, flashcardId, deckId):
+#     if request.method == "PUT":
+#         try:
+#             token = request.headers.get('Authorization')
+#             if not token:
+#                 return JsonResponse({
+#                     'success': False,
+#                     'error': ['Token de autorização ausente. Faça login novamente.']
+#                 }, status=status.HTTP_401_UNAUTHORIZED)
+
+#             jwt_data = validate_jwt(token)
+#             user_id = jwt_data.get('id')
+
+#             deck = Deck.objects.get(id=deckId)
+#             if deck.type_deck == "Standard":
+#                 return JsonResponse({
+#                     "success": False,
+#                     "error": ["Você não tem permissão para alterar este flashcard"]
+#                 }, status=status.HTTP_403_FORBIDDEN)
+
+#             # Recuperar dados do cache
+#             cached_data = cache.get(f"flashcard_{flashcardId}_deck_{deckId}")
+#             if not cached_data:
+#                 return JsonResponse({
+#                     "success": False,
+#                     "error": ["Cache expirado ou não encontrado. Refaça a busca."]
+#                 }, status=status.HTTP_400_BAD_REQUEST)
+
+#             new_data = request.data.get('flashcard', {})
+#             with transaction.atomic():
+#                 # Comparar exemplos
+#                 existing_examples, new_examples, removed_examples = compare_data(
+#                     cached_data["flashcard"]["examples"], new_data.get("examples", [])
+#                 )
+
+#                 # Comparar pronúncias
+#                 existing_pr, new_prs, removed_prs = compare_data(
+#                     cached_data["flashcard"]["pronunciations"], new_data.get("pronunciations", [])
+#                 )
+
+#                 # Comparar traduções
+#                 existing_tr, new_trs, removed_trs = compare_data(
+#                     cached_data["flashcard"]["translations"], new_data.get("translations", [])
+#                 )
+
+#                 # Processar adições, modificações e remoções
+#                 process_additions(new_examples, Pronunciation, deck_flashcard)
+#                 process_removals(removed_examples, Example, deck_flashcard)
+
+#                 # Limpar cache após atualização
+#                 cache.delete(f"flashcard_{flashcardId}_deck_{deckId}")
+
+#             return JsonResponse({"success": True, "message": "Flashcard atualizado com sucesso."}, status=200)
+
+#         except Exception as e:
+#             return JsonResponse({"success": False, "error": str(e)}, status=500)
+#     else:
+#         return JsonResponse({"success": False, "error": ["Metodo não autorizado"]}, status=405)
 
 
+# def compare_data(cached_list, new_list):
+#     cached_set = {item['id'] for item in cached_list}
+#     new_set = {item.get('id') for item in new_list if 'id' in item}
+
+#     to_remove = cached_set - new_set
+#     to_add = [item for item in new_list if item.get('id') not in cached_set]
+#     existing = cached_set & new_set
+
+#     return existing, to_add, to_remove
+
+
+# def process_additions(new_items, model, deck_flashcard):
+#     """
+#     Adiciona novos itens ao banco de dados e os vincula ao deck_flashcard.
+    
+#     Args:
+#         new_items (list): Lista de novos itens a serem adicionados.
+#         model (Django Model): O modelo para os itens (e.g., Example, Pronunciation, Translation).
+#         deck_flashcard (DeckFlashCard): O objeto DeckFlashCard associado.
+#     """
+#     if not new_items:
+#         return
+
+#     # Criar novas instâncias do modelo com os dados fornecidos
+#     objects_to_create = [
+#         model(**item) for item in new_items if isinstance(item, dict)
+#     ]
+#     model.objects.bulk_create(objects_to_create)
+
+#     created_items = model.objects.filter(**{
+#         f"{model._meta.model_name}_id__in": [obj.id for obj in objects_to_create]
+#     })
+
+#     relation_model = get_relation_model(model)
+#     relation_instances = [
+#         relation_model(deck_flashcard=deck_flashcard, **{f"{model._meta.model_name}_id": obj.id})
+#         for obj in created_items
+#     ]
+#     relation_model.objects.bulk_create(relation_instances)
+
+
+# def get_relation_model(model):
+#     relation_mapping = {
+#         Example: DeckFlashcardExample,
+#         Pronunciation: DeckFlashcardPronunciation,
+#         Translation: DeckFlashcardTranslation,
+#         # Adicione outros mapeamentos se necessário
+#     }
+#     return relation_mapping.get(model)
+
+
+# def process_removals_with_objects(sent_objects, model, deck_flashcard, relation_field, unique_fields):
+#     """
+#     Remove objetos que não estão nos dados enviados pelo cliente.
+
+#     :param sent_objects: Lista de objetos enviados pelo cliente.
+#     :param model: Modelo Django que será filtrado.
+#     :param deck_flashcard: Instância de DeckFlashCard associada.
+#     :param relation_field: Nome do campo relacionado no modelo.
+#     :param unique_fields: Campos únicos usados para identificar os objetos no banco.
+#     """
+#     # Obter objetos existentes relacionados ao deck_flashcard
+#     current_objects = model.objects.filter(
+#         **{relation_field: deck_flashcard}
+#     ).values(*unique_fields)
+
+#     # Transformar objetos existentes em um conjunto de dicionários
+#     current_set = {tuple(obj[field] for field in unique_fields) for obj in current_objects}
+
+#     # Transformar objetos enviados em um conjunto de dicionários
+#     sent_set = {tuple(obj[field] for field in unique_fields) for obj in sent_objects}
+
+#     # Identificar objetos a serem removidos
+#     to_remove = current_set - sent_set
+
+#     # Remover os objetos que não estão mais na lista enviada
+#     if to_remove:
+#         model.objects.filter(
+#             **{relation_field: deck_flashcard},
+#             **{
+#                 f"{field}__in": [value[idx] for value in to_remove]
+#                 for idx, field in enumerate(unique_fields)
+#             }
+#         ).delete()
 # def process_img(existing_images, deck_flashcard):
 #     img_ids_to_keep = set()
 #     img_ids_to_add = []

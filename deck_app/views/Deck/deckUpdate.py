@@ -1,6 +1,5 @@
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
-from rest_framework import exceptions
 from ...serializers_deck import PersonDeckUpdateSerializer
 from ...serializers_deck import UDPreferencesUpdateSerializer
 from rest_framework import status

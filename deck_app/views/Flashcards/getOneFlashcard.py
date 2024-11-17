@@ -6,6 +6,7 @@ from django.views.decorators.csrf import csrf_exempt
 from ...models import DeckFlashCard
 from ...models import FlashCard, DeckFlashcardExample
 from ...models import DeckFlashcardTranslation, DeckFlashcardPronunciation
+from django.core.cache import cache
 
 
 @csrf_exempt
@@ -36,9 +37,19 @@ def get_one_flashcard(request, flashcardId, deckId):
             translations_data = [{'id': tr.translation.id,
                                   'textTranslation': tr.translation.text_translation} for tr in translations] if translations.exists() else []
 
+            # flashcard_data = {
+            #         "flashcard": {
+            #             "id": flashcard.id,
+            #             "word": flashcard.word,
+            #             "examples": list(Example.objects.filter(deck_flashcard=deck_flashcard).values()),
+            #             "pronunciations": list(Pronunciation.objects.filter(deck_flashcard=deck_flashcard).values()),
+            #             "translations": list(Translation.objects.filter(deck_flashcard=deck_flashcard).values()),
+            #         }
+            #     }
+
             response_data = {
                 'keyword': flashcard_serializer.data.get('keyword'),
-                'mainPhrase': flashcard_serializer.data.get('mainPhrase'),
+                'mainPhrase': flashcard_serializer.data.get('main_phrase'),
                 'examples': example_data,
                 'translations': translations_data,
                 'pronunciations': pronunciation_data,
