@@ -424,7 +424,6 @@ def process_pr(pr_data, deck_flashcard):
                 if not verify.exists():
                     existing_pr_ids.add(pr_exist.id)
                     pr_exist_ids.add(pr_exist.id)
-                existing_pr_ids.add(pr_exist.id)
             else:
                 try:
                     firebase_audio_url = upload_audio_from_url_to_firebase(
