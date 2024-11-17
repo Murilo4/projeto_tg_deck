@@ -216,40 +216,46 @@ def process_img(existing_images, deck_flashcard):
     img_ids_to_keep = set()
     img_ids_to_add = []
 
+    # Criar um conjunto para verificar imagens já existentes
+    existing_file_urls = set(FlashcardPhoto.objects.filter(
+        deck_flashcard=deck_flashcard).values_list('file_url', flat=True))
+
     for image_data in existing_images:
         img_id = image_data.get('id')
         img_url = image_data.get('fileUrl')
         img_description = image_data.get('description', None)
 
-        if img_id and img_id != 0:
-            img = FlashcardPhoto.objects.filter(
-                file_url=img_url).first()
-            if img:
-                img_ids_to_keep.add(img.file_url)
-            else:
-                img_ids_to_add.append(FlashcardPhoto(
-                    deck_flashcard_id=deck_flashcard.id,
-                    file_url=img_url))
+        # Se já existe no banco, adiciona à lista de imagens a manter
+        if img_url in existing_file_urls:
+            img_ids_to_keep.add(img_url)
         else:
-            img = FlashcardPhoto.objects.filter(
-                file_url=img_url).first()
-            if img:
-                img_ids_to_keep.add(img.file_url)
-            else:
-                img_ids_to_add.append(FlashcardPhoto(
-                    deck_flashcard_id=deck_flashcard.id,
-                    file_url=img_url,
-                    file_description=img_description
-                ))
+            # Se não, prepara para adicionar nova imagem
+            img = FlashcardPhoto(file_url=img_url, deck_flashcard_id=deck_flashcard.id)
+            if img_description:
+                img.file_description = img_description
+            img_ids_to_add.append(img)
 
-    if img_ids_to_add:
-        FlashcardPhoto.objects.bulk_create(img_ids_to_add)
-        for image in img_ids_to_add:
-            existing_img = FlashcardPhoto.objects.filter(
-                file_url=image.file_url).first()
-            if existing_img:
-                img_ids_to_keep.add(existing_img.file_url)
-    return img_ids_to_keep, img_ids_to_add
+    # Evitar duplicação na lista de imagens a serem adicionadas
+    unique_img_ids_to_add = []
+    existing_urls_in_add = set()
+
+    for img in img_ids_to_add:
+        if img.file_url not in existing_urls_in_add:
+            unique_img_ids_to_add.append(img)
+            existing_urls_in_add.add(img.file_url)
+
+    # Realiza o bulk_create apenas com imagens únicas
+    if unique_img_ids_to_add:
+        FlashcardPhoto.objects.bulk_create(unique_img_ids_to_add)
+
+    # Atualiza a lista de URLs a serem mantidas
+    for image in unique_img_ids_to_add:
+        existing_img = FlashcardPhoto.objects.filter(
+            file_url=image.file_url).first()
+        if existing_img:
+            img_ids_to_keep.add(existing_img.file_url)
+
+    return img_ids_to_keep, unique_img_ids_to_add
 
 
 def update_flashcard_data(flashcard, data):
@@ -413,12 +419,10 @@ def process_pr(pr_data, deck_flashcard):
                 audio_url=pr_link).first()
 
             if pr_exist:
-                # Se a pronúncia já existir, associamos ao deck
                 verify = DeckFlashcardPronunciation.objects.filter(
                     pronunciation_id=pr_exist.id,
-                    deck_flashcard_id=deck_flashcard.id)
+                    deck_flashcard_id=deck_flashcard)
                 if not verify.exists():
-                    # Adiciona a pronúncia existente
                     existing_pr_ids.add(pr_exist.id)
                     pr_exist_ids.add(pr_exist.id)
             else:
@@ -441,11 +445,9 @@ def process_pr(pr_data, deck_flashcard):
                     existing_pr_ids.add(created_pr.id)
                     pr_exist_ids.add(created_pr.id)
 
-                    # Adiciona à lista de novas pronúncias
                     new_prs.append(new_pr)
 
                 except Exception as e:
-                    # Caso ocorra um erro ao fazer o upload ou salvar, retorna a exceção
                     raise ValidationError(
                         f"Erro ao salvar pronúncia: {str(e)}")
 
