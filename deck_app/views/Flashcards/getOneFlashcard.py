@@ -9,6 +9,7 @@ from ...models import DeckFlashcardTranslation, DeckFlashcardPronunciation
 from django.core.cache import cache
 import re
 
+
 @csrf_exempt
 @api_view(['GET'])
 def get_one_flashcard(request, flashcardId, deckId):
@@ -86,7 +87,7 @@ def get_one_flashcard(request, flashcardId, deckId):
             return JsonResponse({
                 'success': True,
                 "message": "flashcard retornado com sucesso",
-                'flashcard': [response_data]
+                'flashcard': response_data
             }, status=status.HTTP_200_OK)
 
         except FlashCard.DoesNotExist:

@@ -101,6 +101,6 @@ urlpatterns = [
     path("cron-job/",
          cron_job, name="cron_job"),
 
-     path("update-flashcard-data/", 
+    path("update-flashcard-data/", 
           update_flashcard_data, name="update_flashcard_data"),
 ]
