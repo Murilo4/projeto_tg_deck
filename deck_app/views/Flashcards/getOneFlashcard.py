@@ -7,7 +7,7 @@ from ...models import DeckFlashCard
 from ...models import FlashCard, DeckFlashcardExample, FlashcardPhoto
 from ...models import DeckFlashcardTranslation, DeckFlashcardPronunciation
 from django.core.cache import cache
-
+import re
 
 @csrf_exempt
 @api_view(['GET'])
@@ -28,9 +28,40 @@ def get_one_flashcard(request, flashcardId, deckId):
 
             pronunciations = DeckFlashcardPronunciation.objects.filter(
                 deck_flashcard=deck_flashcard).select_related('pronunciation')
-            pronunciation_data = [{'id': pr.pronunciation.id,
-                                   'keyword': pr.pronunciation.keyword,
-                                   'audioUrl': pr.pronunciation.audio_url} for pr in pronunciations] if pronunciations.exists() else []
+
+            pronunciation_data = []
+            for pr in pronunciations:
+                # Extrair dados da URL da pronúncia usando regex
+                pronunciation_url = pr.pronunciation.audio_url
+                
+                # Expressão regular ajustada para capturar a URL
+                match = re.search(r'pronunciations/([a-zA-Z]+)_([a-zA-Z_]+)_(f|m)_(\w+).mp3', pronunciation_url)
+
+                if match:
+                    keyword = match.group(1)
+                    country = match.group(2)
+                    sex = match.group(3)
+                    voice_name = match.group(4)
+
+                    # Validação de valores de 'sex'
+                    if sex not in ['f', 'm']:
+                        return JsonResponse({'success': False, 
+                                             'error': 'Valor de sex inválido. Deve ser "f" ou "m".'},
+                                             status=status.HTTP_400_BAD_REQUEST)
+
+                    pronunciation_data.append({
+                        'id': pr.pronunciation.id,
+                        'keyword': keyword,
+                        'country': country.replace('_', ' '),  # Substituir _ por espaço se necessário
+                        'sex': sex,
+                        'voiceName': voice_name,
+                        'audioUrl': pronunciation_url
+                    })
+                else:
+                    pronunciation_data.append({
+                        'id': pr.pronunciation.id,
+                        'audioUrl': pronunciation_url
+                    })
 
             translations = DeckFlashcardTranslation.objects.filter(
                 deck_flashcard=deck_flashcard).select_related('translation')
@@ -42,16 +73,6 @@ def get_one_flashcard(request, flashcardId, deckId):
             image_data = [{'id': img.id,
                     'fileUrl': img.file_url,
                     'fileDescription': img.file_description} for img in images] if images.exists() else []
-
-            # flashcard_data = {
-            #         "flashcard": {
-            #             "id": flashcard.id,
-            #             "word": flashcard.word,
-            #             "examples": list(Example.objects.filter(deck_flashcard=deck_flashcard).values()),
-            #             "pronunciations": list(Pronunciation.objects.filter(deck_flashcard=deck_flashcard).values()),
-            #             "translations": list(Translation.objects.filter(deck_flashcard=deck_flashcard).values()),
-            #         }
-            #     }
 
             response_data = {
                 'keyword': flashcard_serializer.data.get('keyword'),
