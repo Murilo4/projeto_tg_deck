@@ -402,18 +402,17 @@ def process_pr(pr_data, deck_flashcard):
         voice_name = pronunciation_data.get('voiceName')
 
         if pr_id and pr_id != 0:
-            # Se já existe um ID de pronúncia fornecido, tentamos associá-lo
             existing_pr = Pronunciation.objects.filter(id=pr_id).first()
             if existing_pr:
                 verify = DeckFlashcardPronunciation.objects.filter(
                     pronunciation_id=existing_pr.id,
                     deck_flashcard_id=deck_flashcard.id)
                 if not verify.exists():
-                    # Adiciona o ID da pronúncia existente
-                    existing_pr_ids.add(existing_pr.id)
-                    pr_exist_ids.add(existing_pr.id)
+                    DeckFlashcardPronunciation.objects.create(
+                        deck_flashcard=deck_flashcard,
+                        pronunciation=existing_pr)
+                existing_pr_ids.add(existing_pr.id)
         else:
-            # Caso contrário, verificamos se a combinação de 'keyword' e 'audio_url' já existe
             pr_exist = Pronunciation.objects.filter(
                 keyword=pr_text,
                 audio_url=pr_link).first()
@@ -425,11 +424,9 @@ def process_pr(pr_data, deck_flashcard):
                 if not verify.exists():
                     existing_pr_ids.add(pr_exist.id)
                     pr_exist_ids.add(pr_exist.id)
-                existing_pr_ids.add(verify.id)
+                existing_pr_ids.add(pr_exist.id)
             else:
-                # Se a pronúncia não existir, precisamos fazer o upload do áudio para o Firebase
                 try:
-                    # Realiza o upload do áudio no Firebase
                     firebase_audio_url = upload_audio_from_url_to_firebase(
                         pr_link, pr_text, country, sex, voice_name)
                     # Agora criamos a pronúncia com o novo áudio no Firebase
