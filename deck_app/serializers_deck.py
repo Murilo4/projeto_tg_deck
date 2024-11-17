@@ -43,7 +43,7 @@ class PersonDeckSerializer(serializers.ModelSerializer):
 
 class PersonDeckUpdateSerializer(serializers.ModelSerializer):
     description = serializers.CharField(source='description_deck',
-                                        required=False)
+                                        required=False, allow_blank=True)
     color = serializers.CharField(source='color_predefinition',
                                   required=False)
     img = serializers.CharField(source="image",
@@ -62,7 +62,9 @@ class PersonDeckUpdateSerializer(serializers.ModelSerializer):
         )
 
     def update(self, instance, validated_data):
-
+        description = validated_data.get('description', None)
+        if description == "":
+            validated_data['description'] = None
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()  # Salva as alterações no banco de dados
@@ -188,7 +190,7 @@ class UDPreferencesSerializer(serializers.ModelSerializer):
 
 
 class UDPreferencesUpdateSerializer(serializers.ModelSerializer):
-    new = serializers.IntegerField(source="new_per_day", 
+    new = serializers.IntegerField(source="new_per_day",
                                    required=False)
     learning = serializers.IntegerField(source="learning_per_day",
                                         required=False)

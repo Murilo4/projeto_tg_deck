@@ -88,6 +88,8 @@ def deck_update(request, deckId):
             translated_data = {
                 field_mapping.get(key, key): value for key, value in request.data.items()
             }
+            if 'description' in translated_data and not translated_data['description']:
+                translated_data['description'] = None
 
             new_deck_data = {
                 field.name: translated_data.get(
@@ -163,7 +165,7 @@ def deck_update(request, deckId):
                 user_flashcards = UserFlashCard.objects.filter(
                     deck_flashcard_id=flashcard.id,
                     user_id=user_id)
-                
+
                 for flashcard_user in user_flashcards:
                     user_flashcard_ids.add(flashcard_user.deck_flashcard.id)
 
