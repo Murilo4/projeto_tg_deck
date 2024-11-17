@@ -204,10 +204,8 @@ def remove_old_img(deck_flashcard, exist_img_urls):
     current_img_urls = FlashcardPhoto.objects.filter(
         deck_flashcard=deck_flashcard
     ).values_list('file_url', flat=True)
-    print(exist_img_urls)
-    print(current_img_urls)
+
     img_to_remove = set(current_img_urls) - set(exist_img_urls)
-    print(img_to_remove)
     if img_to_remove:
         FlashcardPhoto.objects.filter(
             file_url__in=img_to_remove,
@@ -223,27 +221,18 @@ def process_img(existing_images, deck_flashcard):
         img_url = image_data.get('fileUrl')
         img_description = image_data.get('description', None)
 
-        # Caso o 'id' seja válido e não seja 0
         if img_id and img_id != 0:
             img = FlashcardPhoto.objects.filter(
-                file_url=img_url,
-                file_description=img_description).first()
-
+                file_url=img_url).first()
             if img:
-                # Se a imagem já existe, adiciona a URL ao conjunto de imagens a manter
                 img_ids_to_keep.add(img.file_url)
             else:
-                # Caso contrário, adiciona a imagem para ser criada
                 img_ids_to_add.append(FlashcardPhoto(
                     deck_flashcard_id=deck_flashcard.id,
-                    file_url=img_url,
-                    file_description=img_description
-                ))
+                    file_url=img_url))
         else:
-            # Se não for um 'id' válido, ainda verificamos se a imagem já existe
             img = FlashcardPhoto.objects.filter(
-                file_url=img_url,
-                file_description=img_description).first()
+                file_url=img_url).first()
             if img:
                 img_ids_to_keep.add(img.file_url)
             else:
@@ -253,18 +242,13 @@ def process_img(existing_images, deck_flashcard):
                     file_description=img_description
                 ))
 
-    # Cria as imagens em massa (bulk_create), evitando duplicações
     if img_ids_to_add:
         FlashcardPhoto.objects.bulk_create(img_ids_to_add)
-
-        # Depois de criar as imagens, adiciona suas URLs ao conjunto de imagens a manter
         for image in img_ids_to_add:
             existing_img = FlashcardPhoto.objects.filter(
                 file_url=image.file_url).first()
             if existing_img:
-                print(existing_img.file_url)
                 img_ids_to_keep.add(existing_img.file_url)
-    print(img_ids_to_keep)
     return img_ids_to_keep, img_ids_to_add
 
 
