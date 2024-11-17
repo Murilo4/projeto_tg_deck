@@ -425,6 +425,7 @@ def process_pr(pr_data, deck_flashcard):
                 if not verify.exists():
                     existing_pr_ids.add(pr_exist.id)
                     pr_exist_ids.add(pr_exist.id)
+                existing_pr_ids.add(verify.id)
             else:
                 # Se a pronúncia não existir, precisamos fazer o upload do áudio para o Firebase
                 try:
