@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
 from ...validation.validation_jwt import validate_jwt
-from ...serializers_flashcard import FlashCardGetSerializer
+from ...serializers_flashcard import FlashCardGetallSerializer
 
 
 @api_view(["POST"])
@@ -217,7 +217,7 @@ def get_flashcards_for_study(request, deckId):
                         ).select_related('pronunciation')[:2]
 
                     # Formatação dos dados do flashcard
-                    flashcard_data = FlashCardGetSerializer(flashcard).data
+                    flashcard_data = FlashCardGetallSerializer(flashcard).data
 
                     # Obtendo os campos 'audio_url' e 'keyword' das pronúncias
                     pronunciation_data = [
