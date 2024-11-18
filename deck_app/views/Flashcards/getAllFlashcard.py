@@ -39,8 +39,6 @@ def get_all_flashcard(request, page_number, deckId):
             new = request.GET.get('New', None)
             learning = request.GET.get('Learning', None)
             reviewing = request.GET.get('Reviewing', None)
-            most_reviewed = request.GET.get('MostReviewed', None)
-            least_reviewed = request.GET.get('LeastReviewed', None)
 
             # Obter IDs de flashcards do deck específico
             deck_flashcard_ids = DeckFlashCard.objects.filter(
@@ -70,28 +68,15 @@ def get_all_flashcard(request, page_number, deckId):
                 id__in=user_flashcards_qs.values_list(
                     'deck_flashcard__flashcard_id', flat=True))
 
-            # Filtragem por número de revisões (mais ou menos revisado)
-            if most_reviewed == 'true' or least_reviewed == 'true':
-                flashcards = flashcards.annotate(
-                    total_reviews=F('userflashcard__one_star') +
-                    F('userflashcard__two_stars') +
-                    F('userflashcard__three_stars') +
-                    F('userflashcard__four_stars') +
-                    F('userflashcard__five_stars')
-                )
-                if most_reviewed == 'true':
-                    flashcards = flashcards.order_by('-total_reviews')
-                elif least_reviewed == 'true':
-                    flashcards = flashcards.order_by('total_reviews')
 
             # Ordenação conforme os parâmetros
-            if order_by == 'newest':
+            if order_by == 'newer':
                 flashcards = flashcards.order_by('-created_at')
-            elif order_by == 'oldest':
+            elif order_by == 'older':
                 flashcards = flashcards.order_by('created_at')
-            elif order_by == 'recentlyModified':
+            elif order_by == 'lastModifications':
                 flashcards = flashcards.order_by('-updated_at')
-            elif order_by == 'lastTime':
+            elif order_by == 'lastStudied':
                 user_flashcards = UserFlashCard.objects.filter(
                     user_id=user_id).values(
                     'deck_flashcard__deck_id').annotate(
@@ -99,6 +84,22 @@ def get_all_flashcard(request, page_number, deckId):
                 recent_deck_ids = [uf['deck_flashcard__deck_id']
                                    for uf in user_flashcards]
                 flashcards = flashcards.filter(id__in=recent_deck_ids)
+            elif order_by == 'mostReviewed':
+                flashcards = flashcards.annotate(
+                    total_reviews=F('userflashcard__one_star') +
+                    F('userflashcard__two_stars') +
+                    F('userflashcard__three_stars') +
+                    F('userflashcard__four_stars') +
+                    F('userflashcard__five_stars')
+                ).order_by('-total_reviews')
+            elif order_by == 'lessReviewed':
+                flashcards = flashcards.annotate(
+                    total_reviews=F('userflashcard__one_star') +
+                    F('userflashcard__two_stars') +
+                    F('userflashcard__three_stars') +
+                    F('userflashcard__four_stars') +
+                    F('userflashcard__five_stars')
+                ).order_by('total_reviews')
 
             # Paginação dos resultados
             paginator = Paginator(flashcards, 10)
