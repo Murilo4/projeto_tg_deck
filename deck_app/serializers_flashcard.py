@@ -13,14 +13,28 @@ class CreateFlashCardSerializer(serializers.ModelSerializer):
         fields = ['id', 'main_phrase', 'keyword']
 
 
-class FlashCardGetSerializer(serializers.ModelSerializer):
-    LastModification = serializers.SerializerMethodField()
-    CreatedRecently = serializers.SerializerMethodField()
+class FlashCardGetallSerializer(serializers.ModelSerializer):
+    mainPhrase = serializers.SerializerMethodField()
 
     class Meta:
         model = FlashCard
         fields = (
-            'id', 'keyword', 'main_phrase', 'LastModification',
+            'id', 'keyword', 'mainPhrase',
+        )
+
+    def get_mainPhrase(self, obj):
+        return obj.main_phrase
+
+
+class FlashCardGetSerializer(serializers.ModelSerializer):
+    LastModification = serializers.SerializerMethodField()
+    CreatedRecently = serializers.SerializerMethodField()
+    mainPhrase = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FlashCard
+        fields = (
+            'id', 'keyword', 'mainPhrase', 'LastModification',
             'CreatedRecently'
         )
 
