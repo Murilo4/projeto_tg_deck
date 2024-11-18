@@ -3,7 +3,7 @@ from ...models import UserFlashCard, UserDeckPreferences
 from ...models import DeckFlashcardPronunciation
 from ...models import DeckFlashcardExample, DeckFlashCard
 from ...models import FlashCardPriority, FlashCard
-from ...models import DeckFlashcardTranslation
+from ...models import DeckFlashcardTranslation, Deck
 from rest_framework import status
 from rest_framework.decorators import api_view
 from django.http import JsonResponse
@@ -12,10 +12,28 @@ from ...serializers_flashcard import FlashCardGetallSerializer
 
 
 @api_view(["POST"])
-def study_flashcard(request, deck_flashcard_id, user_id, star_rating):
+def study_flashcard(request, flashcardId, deckId, star_rating):
     try:
+        token = request.headers.get('Authorization')
+        if not token:
+            return JsonResponse({
+                'success': False,
+                'error': ['Token de autorização ausente.']
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Validando o JWT e recuperando o user_id
+        jwt_data = validate_jwt(token)
+        user_id = jwt_data.get('id')
+
+        if not user_id:
+            return JsonResponse({'success': False,
+                                'error': ['userId é necessário']},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+        deck_flashcard = DeckFlashCard.objects.filter(flashcard_id=flashcardId,
+                                                      deck_id=deckId)
         user_flashcard = UserFlashCard.objects.get(
-                deck_flashcard_id=deck_flashcard_id,
+                deck_flashcard_id=deck_flashcard.id,
                 user_id=user_id
             )
 
@@ -81,7 +99,7 @@ def study_flashcard(request, deck_flashcard_id, user_id, star_rating):
 
         # Atualiza ou cria a prioridade no FlashCardPriority
         flashcard_priority, created = FlashCardPriority.objects.get_or_create(
-            deck_flashcard_id=deck_flashcard_id,
+            deck_flashcard_id=deck_flashcard.id,
             user_id=user_id
         )
         flashcard_priority.priority = new_priority
@@ -216,10 +234,8 @@ def get_flashcards_for_study(request, deckId):
                         deck_flashcard__flashcard_id=flashcard.id
                         ).select_related('pronunciation')[:2]
 
-                    # Formatação dos dados do flashcard
                     flashcard_data = FlashCardGetallSerializer(flashcard).data
 
-                    # Obtendo os campos 'audio_url' e 'keyword' das pronúncias
                     pronunciation_data = [
                         {
                             'audio_url': pronunciation.pronunciation.audio_url,
@@ -238,17 +254,18 @@ def get_flashcards_for_study(request, deckId):
 
                     response_data.append(flashcard_info)
 
-            # Se não encontrar flashcards, retorna erro
             if not response_data:
                 return JsonResponse({
                     'success': False,
                     'error': ['Nenhum flashcard encontrado para estudo.']
                 }, status=status.HTTP_404_NOT_FOUND)
 
+            deck_name = Deck.objects.filter(id=deckId).first()
             # Retornando os dados dos flashcards para estudo
             return JsonResponse({
                 'success': True,
                 'message': ['Flashcards para estudo retornados.'],
+                'deckName': deck_name.title,
                 'flashcards': response_data
             }, status=status.HTTP_200_OK)
 
