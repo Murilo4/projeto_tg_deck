@@ -2,7 +2,7 @@ from django.utils import timezone
 from ...models import UserFlashCard, UserDeckPreferences
 from ...models import DeckFlashcardPronunciation
 from ...models import DeckFlashcardExample, DeckFlashCard
-from ...models import FlashCardPriority, FlashCard
+from ...models import FlashCardPriority, FlashCard, FlashcardPhoto
 from ...models import DeckFlashcardTranslation, Deck
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -226,30 +226,32 @@ def get_flashcards_for_study(request, deckId):
                 for flashcard in flashcards:
                     examples = DeckFlashcardExample.objects.filter(
                         deck_flashcard__flashcard_id=flashcard.id
-                        ).select_related('example')[:2]
+                        ).select_related('example')
                     translations = DeckFlashcardTranslation.objects.filter(
                         deck_flashcard__flashcard_id=flashcard.id
-                        ).select_related('translation')[:2]
+                        ).select_related('translation')
                     pronunciations = DeckFlashcardPronunciation.objects.filter(
                         deck_flashcard__flashcard_id=flashcard.id
-                        ).select_related('pronunciation')[:2]
+                        ).select_related('pronunciation')
+                    images = FlashcardPhoto.objects.filter(
+                        deck_flashcard__flashcard_id=flashcard.id)
 
                     flashcard_data = FlashCardGetallSerializer(flashcard).data
 
                     pronunciation_data = [
                         {
-                            'audio_url': pronunciation.pronunciation.audio_url,
+                            'audioUrl': pronunciation.pronunciation.audio_url,
                             'keyword': pronunciation.pronunciation.keyword
                         }
                         for pronunciation in pronunciations
                     ]
 
-                    # Organizando a resposta
                     flashcard_info = {
                         **flashcard_data,
                         'examples': [example.example.text_example for example in examples],
                         'translations': [translation.translation.text_translation for translation in translations],
-                        'pronunciations': pronunciation_data
+                        'pronunciations': pronunciation_data,
+                        'images': [image.file_url for image in images]
                     }
 
                     response_data.append(flashcard_info)
