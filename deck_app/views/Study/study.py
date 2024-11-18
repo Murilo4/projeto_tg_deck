@@ -6,11 +6,13 @@ from ...models import FlashCardPriority, FlashCard, FlashcardPhoto
 from ...models import DeckFlashcardTranslation, Deck
 from rest_framework import status
 from rest_framework.decorators import api_view
+from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from ...validation.validation_jwt import validate_jwt
 from ...serializers_flashcard import FlashCardGetallSerializer
 
 
+@csrf_exempt
 @api_view(["POST"])
 def study_flashcard(request, flashcardId, deckId, star_rating):
     try:
@@ -124,6 +126,7 @@ def study_flashcard(request, flashcardId, deckId, star_rating):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@csrf_exempt
 @api_view(['GET'])
 def get_flashcards_for_study(request, deckId):
     if request.method == 'GET':

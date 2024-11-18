@@ -17,7 +17,7 @@ from .views.Flashcards.DeleteFlashcard import delete_flashcard
 from .views.Audio.text import get_translated_word, get_example_sentences
 from .views.Audio.text import get_correct_word, get_correct_phrase
 from .views.Audio.audio import get_pronunciations
-from .views.Study.study import get_flashcards_for_study
+from .views.Study.study import get_flashcards_for_study, study_flashcard
 from .views.Flashcards.create_flashcard import update_flashcard_data
 from .views.Flashcards.create_flashcard import create_multiple_flashcard
 
@@ -54,7 +54,6 @@ urlpatterns = [
     path("get-all-decks-to-user/userId/",
          get_all_decks_to_user, name="get_all_decks_to_user"),
 
-    # Flashcard Paths
     path("create-flashcard/<int:deckId>/",
          create_flashcard, name="create_flashcard"),
 
@@ -75,7 +74,6 @@ urlpatterns = [
     path("create-multiple-flashcard/",
          create_multiple_flashcard, name="create_multiple_flashcard"),
 
-    # Text Paths
     path("get-translated-word/",
          get_translated_word, name="get_translated_word"),
 
@@ -88,19 +86,18 @@ urlpatterns = [
     path("get-correct-phrase/",
          get_correct_phrase, name="get_correct_phrase"),
 
-    # Audio Paths
-
     path("get-pronunciations/",
          get_pronunciations, name="get_pronunciations"),
 
     path('voices/',
          get_pronunciations, name='available_voices'),
 
-    # Cron Job Path
-
     path("cron-job/",
          cron_job, name="cron_job"),
 
-    path("update-flashcard-data/", 
-          update_flashcard_data, name="update_flashcard_data"),
+    path("update-flashcard-data/",
+         update_flashcard_data, name="update_flashcard_data"),
+
+    path("study_flashcard/<int:flashcardId>/<int:deckId>/<int:star_rating>/",
+         study_flashcard, name="study_flashcard")
 ]
