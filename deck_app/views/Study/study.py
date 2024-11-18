@@ -10,12 +10,14 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from ...validation.validation_jwt import validate_jwt
 from ...serializers_flashcard import FlashCardGetallSerializer
+from datetime import timedelta
 
 
 @csrf_exempt
 @api_view(["POST"])
 def study_flashcard(request, flashcardId, deckId, star_rating):
     try:
+        # Verificação do token de autorização
         token = request.headers.get('Authorization')
         if not token:
             return JsonResponse({
@@ -23,7 +25,7 @@ def study_flashcard(request, flashcardId, deckId, star_rating):
                 'error': ['Token de autorização ausente.']
             }, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Validando o JWT e recuperando o user_id
+        # Validação do JWT
         jwt_data = validate_jwt(token)
         user_id = jwt_data.get('id')
 
@@ -32,14 +34,24 @@ def study_flashcard(request, flashcardId, deckId, star_rating):
                                 'error': ['userId é necessário']},
                                 status=status.HTTP_400_BAD_REQUEST)
 
-        deck_flashcard = DeckFlashCard.objects.filter(flashcard_id=flashcardId,
-                                                      deck_id=deckId)
-        user_flashcard = UserFlashCard.objects.get(
-                deck_flashcard_id=deck_flashcard.id,
-                user_id=user_id
-            )
+        # Obter deck_flashcard e user_flashcard
+        deck_flashcard = DeckFlashCard.objects.get(
+            flashcard_id=flashcardId,
+            deck_id=deckId)
 
-        # Atualiza o campo de estrela com base no feedback do usuário
+        user_flashcard = UserFlashCard.objects.get(
+            deck_flashcard_id=deck_flashcard,
+            user_id=user_id
+        )
+
+        # Garantir que contadores não sejam None
+        user_flashcard.one_star = user_flashcard.one_star or 0
+        user_flashcard.two_stars = user_flashcard.two_stars or 0
+        user_flashcard.three_stars = user_flashcard.three_stars or 0
+        user_flashcard.four_stars = user_flashcard.four_stars or 0
+        user_flashcard.five_stars = user_flashcard.five_stars or 0
+
+        # Atualizar contadores com base na avaliação
         if star_rating == 1:
             user_flashcard.one_star += 1
         elif star_rating == 2:
@@ -51,11 +63,11 @@ def study_flashcard(request, flashcardId, deckId, star_rating):
         elif star_rating == 5:
             user_flashcard.five_stars += 1
 
-        # Atualiza o último feedback e a última vez estudado
+        # Atualizar feedback e última data de estudo
         user_flashcard.last_feedback = star_rating
         user_flashcard.last_time = timezone.now()
 
-        # Calcula o número total de exibições somando as avaliações
+        # Total de exibições
         total_exhibitions = (
             user_flashcard.one_star +
             user_flashcard.two_stars +
@@ -64,14 +76,15 @@ def study_flashcard(request, flashcardId, deckId, star_rating):
             user_flashcard.five_stars
         )
 
+        # Atualizar situação do flashcard
         if user_flashcard.situation == "New" and total_exhibitions >= 1:
             user_flashcard.situation = "Learning"
         elif user_flashcard.situation == "Learning" and total_exhibitions >= 5:
             user_flashcard.situation = "Reviewing"
-        
-        # Salva as alterações no banco de dados
+
         user_flashcard.save()
 
+        # Pesos e cálculo de prioridade
         weights = {
             1: 5,
             2: 4,
@@ -80,38 +93,78 @@ def study_flashcard(request, flashcardId, deckId, star_rating):
             5: 1
         }
 
-        # Calcula a pontuação ponderada
-        total_weighted_score = (
-            user_flashcard.one_star * weights[1] +
-            user_flashcard.two_stars * weights[2] +
-            user_flashcard.three_stars * weights[3] +
-            user_flashcard.four_stars * weights[4] +
-            user_flashcard.five_stars * weights[5]
-        )
+        try:
+            last_feedback_weight = weights.get(user_flashcard.last_feedback, 0)
+            total_weighted_score = (
+                user_flashcard.one_star * weights[1] +
+                user_flashcard.two_stars * weights[2] +
+                user_flashcard.three_stars * weights[3] +
+                user_flashcard.four_stars * weights[4] +
+                user_flashcard.five_stars * weights[5] +
+                last_feedback_weight * 2  # Multiplicador adicional para última avaliação
+            )
 
-        last_feedback_weight = weights.get(user_flashcard.last_feedback, 0)
-        total_weighted_score += last_feedback_weight * 2
+            total_counts = total_exhibitions + 2
+            new_priority = total_weighted_score / total_counts if total_counts > 0 else 3.0
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Erro ao calcular a prioridade: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Calcula a média ponderada da prioridade
-        total_counts = total_exhibitions + 2
-        if total_counts > 0:
-            new_priority = total_weighted_score / total_counts
-        else:
-            new_priority = 3.0  # Valor padrão se não houver feedbacks
-
-        # Atualiza ou cria a prioridade no FlashCardPriority
+        # Atualizar FlashCardPriority
         flashcard_priority, created = FlashCardPriority.objects.get_or_create(
             deck_flashcard_id=deck_flashcard.id,
             user_id=user_id
         )
         flashcard_priority.priority = new_priority
+
+        # Calcular próxima data de estudo com base na prioridade e avaliações
+        # Base inicial para flashcards (nota 1 = 1 dia, nota 2 = 2 dias, ...)
+        base_days = star_rating
+        max_days = 15  # Máximo espaçamento
+        adjustment_factor = 0.6  # Fator de ajuste para reduzir espaçamento geral
+        next_study_days = base_days + \
+            int((max_days - base_days) * (5 - new_priority) / 5 * adjustment_factor)
+
+        # Fator dinâmico de aumento do espaçamento ao longo do tempo (quanto mais fácil o flashcard, maior o aumento)
+        # Tempo desde a última revisão
+        reviewing_time = (timezone.now() - user_flashcard.last_time).days
+        # Aumento gradual com o tempo (5% a cada 30 dias)
+        dynamic_factor = 1 + (reviewing_time / 30) * 0.05
+
+        # Aplicar fator dinâmico de aumento de espaçamento
+        next_study_days = int(next_study_days * dynamic_factor)
+
+        # Garantir que o intervalo não ultrapasse o máximo de 15 dias
+        next_study_days = min(next_study_days, max_days)
+
+        # Verificar se o usuário estudou antes da data marcada
+        if user_flashcard.last_time > flashcard_priority.date_to_study:
+            next_study_days = max(next_study_days, base_days)
+
+        user_flashcard.next_time = timezone.now() + timezone.timedelta(days=next_study_days)
+        user_flashcard.save()
+        flashcard_priority.date_to_study = timezone.now(
+        ) + timezone.timedelta(days=next_study_days)
         flashcard_priority.save()
+
+        # Condições de finalização do flashcard
+        if user_flashcard.situation == "Reviewing":
+            if total_exhibitions >= 10 or (total_exhibitions >= 7 and next_study_days >= max_days):
+                user_flashcard.situation = "Finished"
+                user_flashcard.save()
 
         return JsonResponse({
             'success': True,
-            'message':
-            'Estado do flashcard e prioridade atualizados com sucesso.',
+            'message': 'Estado do flashcard e prioridade atualizados com sucesso.',
         }, status=status.HTTP_200_OK)
+
+    except DeckFlashCard.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'DeckFlashCard não encontrado.'
+        }, status=status.HTTP_404_NOT_FOUND)
 
     except UserFlashCard.DoesNotExist:
         return JsonResponse({
@@ -176,6 +229,9 @@ def get_flashcards_for_study(request, deckId):
                 'review_flashcards': []
             }
 
+            # Obtendo a data atual
+            now = timezone.now()
+
             # Flashcards "New"
             new_flashcards = FlashCard.objects.filter(
                 id__in=deck_flashcard_ids
@@ -191,51 +247,116 @@ def get_flashcards_for_study(request, deckId):
             learning_flashcards = FlashCard.objects.filter(
                 id__in=deck_flashcard_ids
             ).prefetch_related(
-                'deckflashcard_set__userflashcards'  # Usando a relação reversa
+                'deckflashcard_set__userflashcards'
             ).filter(
-                deckflashcard__userflashcards__situation='Learning'
+                deckflashcard__userflashcards__situation='Learning',
+                deckflashcard__userflashcards__next_time__lte=now
+            ).order_by(
+                'deckflashcard__userflashcards__next_time'
             )[:learning_per_day]
 
             flashcards_to_study['learning_flashcards'] = learning_flashcards
 
             # Flashcards "Reviewing" - Usando next_time da tabela UserFlashCard
-            now = timezone.now()  # Obtém o horário atual
             review_flashcards = FlashCard.objects.filter(
                 id__in=deck_flashcard_ids
             ).prefetch_related(
-                'deckflashcard_set__userflashcards'  # Usando a relação reversa
+                'deckflashcard_set__userflashcards'
             ).filter(
                 deckflashcard__userflashcards__situation='Reviewing',
                 deckflashcard__userflashcards__next_time__lte=now
+            ).order_by(
+                'deckflashcard__userflashcards__next_time'
             )[:reviewing_per_day]
 
-            if not review_flashcards:
-                # Buscar os flashcards com a data `next_time` mais próxima
-                review_flashcards = FlashCard.objects.filter(
+            flashcards_to_study['review_flashcards'] = review_flashcards
+
+            if len(flashcards_to_study['new_flashcards']) < new_per_day:
+                # Buscando flashcards atrasados "New"
+                additional_new_flashcards = FlashCard.objects.filter(
+                    id__in=deck_flashcard_ids
+                ).prefetch_related(
+                    'deckflashcard_set__userflashcards'
+                ).filter(
+                    deckflashcard__userflashcards__situation='New',
+                    deckflashcard__userflashcards__next_time__lt=now
+                )[:new_per_day - len(flashcards_to_study['new_flashcards'])]
+                flashcards_to_study['new_flashcards'] = list(
+                    flashcards_to_study['new_flashcards']) + list(additional_new_flashcards)
+
+            if len(flashcards_to_study['learning_flashcards']) < learning_per_day:
+                # Buscando flashcards atrasados "Learning" (até 5 dias de atraso)
+                additional_learning_flashcards = FlashCard.objects.filter(
+                    id__in=deck_flashcard_ids
+                ).prefetch_related(
+                    'deckflashcard_set__userflashcards'
+                ).filter(
+                    deckflashcard__userflashcards__situation='Learning',
+                    deckflashcard__userflashcards__next_time__lt=now,
+                    deckflashcard__userflashcards__next_time__gte=now -
+                    timedelta(days=5)
+                )[:learning_per_day - len(flashcards_to_study['learning_flashcards'])]
+                flashcards_to_study['learning_flashcards'] = list(
+                    flashcards_to_study['learning_flashcards']) + list(additional_learning_flashcards)
+
+            if len(flashcards_to_study['review_flashcards']) < reviewing_per_day:
+                # Buscando flashcards atrasados "Reviewing" (até 3 dias de atraso)
+                additional_review_flashcards = FlashCard.objects.filter(
                     id__in=deck_flashcard_ids
                 ).prefetch_related(
                     'deckflashcard_set__userflashcards'
                 ).filter(
                     deckflashcard__userflashcards__situation='Reviewing',
-                    deckflashcard__userflashcards__next_time__gt=now
-                ).order_by(
-                    'deckflashcard__userflashcards__next_time'
-                    )[:reviewing_per_day]
+                    deckflashcard__userflashcards__next_time__lt=now,
+                    deckflashcard__userflashcards__next_time__gte=now -
+                    timedelta(days=3)
+                )[:reviewing_per_day - len(flashcards_to_study['review_flashcards'])]
+                flashcards_to_study['review_flashcards'] = list(
+                    flashcards_to_study['review_flashcards']) + list(additional_review_flashcards)
 
-            flashcards_to_study['review_flashcards'] = review_flashcards
+            # Se ainda não tiver flashcards suficientes, buscamos os próximos dias
+            if len(flashcards_to_study['learning_flashcards']) < learning_per_day:
+                # Buscando flashcards para o próximo dia "Learning" (até 5 dias à frente)
+                additional_learning_flashcards = FlashCard.objects.filter(
+                    id__in=deck_flashcard_ids
+                ).prefetch_related(
+                    'deckflashcard_set__userflashcards'
+                ).filter(
+                    deckflashcard__userflashcards__situation='Learning',
+                    deckflashcard__userflashcards__next_time__gte=now,
+                    deckflashcard__userflashcards__next_time__lte=now +
+                    timedelta(days=5)
+                )[:learning_per_day - len(flashcards_to_study['learning_flashcards'])]
+                flashcards_to_study['learning_flashcards'].extend(
+                    additional_learning_flashcards)
+
+            if len(flashcards_to_study['review_flashcards']) < reviewing_per_day:
+                # Buscando flashcards para o próximo dia "Reviewing" (até 3 dias à frente)
+                additional_review_flashcards = FlashCard.objects.filter(
+                    id__in=deck_flashcard_ids
+                ).prefetch_related(
+                    'deckflashcard_set__userflashcards'
+                ).filter(
+                    deckflashcard__userflashcards__situation='Reviewing',
+                    deckflashcard__userflashcards__next_time__gte=now,
+                    deckflashcard__userflashcards__next_time__lte=now +
+                    timedelta(days=3)
+                )[:reviewing_per_day - len(flashcards_to_study['review_flashcards'])]
+                flashcards_to_study['review_flashcards'].extend(
+                    additional_review_flashcards)
 
             response_data = []
             for situation, flashcards in flashcards_to_study.items():
                 for flashcard in flashcards:
                     examples = DeckFlashcardExample.objects.filter(
                         deck_flashcard__flashcard_id=flashcard.id
-                        ).select_related('example')
+                    ).select_related('example')
                     translations = DeckFlashcardTranslation.objects.filter(
                         deck_flashcard__flashcard_id=flashcard.id
-                        ).select_related('translation')
+                    ).select_related('translation')
                     pronunciations = DeckFlashcardPronunciation.objects.filter(
                         deck_flashcard__flashcard_id=flashcard.id
-                        ).select_related('pronunciation')
+                    ).select_related('pronunciation')
                     images = FlashcardPhoto.objects.filter(
                         deck_flashcard__flashcard_id=flashcard.id)
 
@@ -245,41 +366,27 @@ def get_flashcards_for_study(request, deckId):
                         {
                             'audioUrl': pronunciation.pronunciation.audio_url,
                             'keyword': pronunciation.pronunciation.keyword
-                        }
-                        for pronunciation in pronunciations
+                        } for pronunciation in pronunciations
                     ]
 
-                    flashcard_info = {
-                        **flashcard_data,
+                    flashcard_data.update({
                         'examples': [example.example.text_example for example in examples],
                         'translations': [translation.translation.text_translation for translation in translations],
                         'pronunciations': pronunciation_data,
                         'images': [image.file_url for image in images]
-                    }
+                    })
 
-                    response_data.append(flashcard_info)
-
-            if not response_data:
-                return JsonResponse({
-                    'success': False,
-                    'error': ['Nenhum flashcard encontrado para estudo.']
-                }, status=status.HTTP_404_NOT_FOUND)
-
+                    response_data.append(flashcard_data)
             deck_name = Deck.objects.filter(id=deckId).first()
-            # Retornando os dados dos flashcards para estudo
             return JsonResponse({
                 'success': True,
                 'message': ['Flashcards para estudo retornados.'],
                 'deckName': deck_name.title,
-                'flashcards': response_data
-            }, status=status.HTTP_200_OK)
+                'flashcards': response_data,
+            })
 
         except Exception as e:
-            return JsonResponse({"success": False,
-                                 "error": str(e)},
-                                status=status.HTTP_400_BAD_REQUEST)
-
-    else:
-        return JsonResponse({"success": False,
-                             "error": ["Método não autorizado"]},
-                            status=status.HTTP_405_METHOD_NOT_ALLOWED)
+            return JsonResponse({
+                'success': False,
+                'error': ['Erro ao buscar flashcards para estudo: ' + str(e)],
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

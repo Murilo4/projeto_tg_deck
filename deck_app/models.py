@@ -109,16 +109,17 @@ class UserDeckPreferences(models.Model):
 
 
 class UserFlashCard(models.Model):
+    id = models.IntegerField(primary_key=True)
     deck_flashcard = models.ForeignKey(
         DeckFlashCard, on_delete=models.CASCADE, related_name="userflashcards")
-    user_id = models.IntegerField(primary_key=True)
+    user_id = models.IntegerField()
     situation = models.CharField(max_length=50)
-    one_star = models.IntegerField(default=None)
-    two_stars = models.IntegerField(default=None)
-    three_stars = models.IntegerField(default=None)
-    four_stars = models.IntegerField(default=None)
-    five_stars = models.IntegerField(default=None)
-    last_feedback = models.IntegerField(default=None)
+    one_star = models.IntegerField(default=0)
+    two_stars = models.IntegerField(default=0)
+    three_stars = models.IntegerField(default=0)
+    four_stars = models.IntegerField(default=0)
+    five_stars = models.IntegerField(default=0)
+    last_feedback = models.IntegerField(default=0)
     last_time = models.DateTimeField(default=None)
     next_time = models.DateTimeField(default=None)
     created_at = models.DateTimeField(auto_now=True)

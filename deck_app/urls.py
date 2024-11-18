@@ -98,6 +98,6 @@ urlpatterns = [
     path("update-flashcard-data/",
          update_flashcard_data, name="update_flashcard_data"),
 
-    path("study_flashcard/<int:flashcardId>/<int:deckId>/<int:star_rating>/",
+    path("study-flashcard/<int:flashcardId>/<int:deckId>/<int:star_rating>/",
          study_flashcard, name="study_flashcard")
 ]
