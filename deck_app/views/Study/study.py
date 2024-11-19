@@ -245,9 +245,9 @@ def get_flashcards_for_study(request, deckId):
                 'deckflashcard_set__userflashcards'  # Usando a relação reversa
             ).filter(
                 deckflashcard__userflashcards__situation='New'
-            )[:new_per_day]
+            ).distinct()[:new_per_day]
 
-            flashcards_to_study['new_flashcards'] = new_flashcards
+            flashcards_to_study['new_flashcards'] = list(new_flashcards)
 
             # Flashcards "Learning"
             learning_flashcards = FlashCard.objects.filter(
@@ -259,9 +259,9 @@ def get_flashcards_for_study(request, deckId):
                 deckflashcard__userflashcards__next_time__lte=now
             ).order_by(
                 'deckflashcard__userflashcards__next_time'
-            )[:learning_per_day]
+            ).distinct()[:learning_per_day]
 
-            flashcards_to_study['learning_flashcards'] = learning_flashcards
+            flashcards_to_study['learning_flashcards'] = list(learning_flashcards)
 
             # Flashcards "Reviewing" - Usando next_time da tabela UserFlashCard
             review_flashcards = FlashCard.objects.filter(
@@ -273,12 +273,20 @@ def get_flashcards_for_study(request, deckId):
                 deckflashcard__userflashcards__next_time__lte=now
             ).order_by(
                 'deckflashcard__userflashcards__next_time'
-            )[:reviewing_per_day]
+            ).distinct()[:reviewing_per_day]
 
-            flashcards_to_study['review_flashcards'] = review_flashcards
+            flashcards_to_study['review_flashcards'] = list(review_flashcards)
 
+            # Garantir que não estamos pegando o mesmo flashcard mais de uma vez
+            all_selected_flashcards = set(
+                flashcards_to_study['new_flashcards'] +
+                flashcards_to_study['learning_flashcards'] +
+                flashcards_to_study['review_flashcards']
+            )
+
+            # Se não tiver flashcards suficientes, buscamos flashcards atrasados ou para os próximos dias
             if len(flashcards_to_study['new_flashcards']) < new_per_day:
-                # Buscando flashcards atrasados "New"
+                # Flashcards atrasados "New"
                 additional_new_flashcards = FlashCard.objects.filter(
                     id__in=deck_flashcard_ids
                 ).prefetch_related(
@@ -286,12 +294,15 @@ def get_flashcards_for_study(request, deckId):
                 ).filter(
                     deckflashcard__userflashcards__situation='New',
                     deckflashcard__userflashcards__next_time__lt=now
-                )[:new_per_day - len(flashcards_to_study['new_flashcards'])]
-                flashcards_to_study['new_flashcards'] = list(
-                    flashcards_to_study['new_flashcards']) + list(additional_new_flashcards)
+                ).exclude(
+                    id__in=[flashcard.id for flashcard in all_selected_flashcards]
+                ).distinct()[:new_per_day - len(flashcards_to_study['new_flashcards'])]
+
+                flashcards_to_study['new_flashcards'].extend(additional_new_flashcards)
+                all_selected_flashcards.update(additional_new_flashcards)
 
             if len(flashcards_to_study['learning_flashcards']) < learning_per_day:
-                # Buscando flashcards atrasados "Learning" (até 5 dias de atraso)
+                # Flashcards atrasados "Learning" (até 5 dias de atraso)
                 additional_learning_flashcards = FlashCard.objects.filter(
                     id__in=deck_flashcard_ids
                 ).prefetch_related(
@@ -299,14 +310,16 @@ def get_flashcards_for_study(request, deckId):
                 ).filter(
                     deckflashcard__userflashcards__situation='Learning',
                     deckflashcard__userflashcards__next_time__lt=now,
-                    deckflashcard__userflashcards__next_time__gte=now -
-                    timedelta(days=5)
-                )[:learning_per_day - len(flashcards_to_study['learning_flashcards'])]
-                flashcards_to_study['learning_flashcards'] = list(
-                    flashcards_to_study['learning_flashcards']) + list(additional_learning_flashcards)
+                    deckflashcard__userflashcards__next_time__gte=now - timedelta(days=5)
+                ).exclude(
+                    id__in=[flashcard.id for flashcard in all_selected_flashcards]
+                ).distinct()[:learning_per_day - len(flashcards_to_study['learning_flashcards'])]
+
+                flashcards_to_study['learning_flashcards'].extend(additional_learning_flashcards)
+                all_selected_flashcards.update(additional_learning_flashcards)
 
             if len(flashcards_to_study['review_flashcards']) < reviewing_per_day:
-                # Buscando flashcards atrasados "Reviewing" (até 3 dias de atraso)
+                # Flashcards atrasados "Reviewing" (até 3 dias de atraso)
                 additional_review_flashcards = FlashCard.objects.filter(
                     id__in=deck_flashcard_ids
                 ).prefetch_related(
@@ -314,42 +327,13 @@ def get_flashcards_for_study(request, deckId):
                 ).filter(
                     deckflashcard__userflashcards__situation='Reviewing',
                     deckflashcard__userflashcards__next_time__lt=now,
-                    deckflashcard__userflashcards__next_time__gte=now -
-                    timedelta(days=3)
-                )[:reviewing_per_day - len(flashcards_to_study['review_flashcards'])]
-                flashcards_to_study['review_flashcards'] = list(
-                    flashcards_to_study['review_flashcards']) + list(additional_review_flashcards)
+                    deckflashcard__userflashcards__next_time__gte=now - timedelta(days=3)
+                ).exclude(
+                    id__in=[flashcard.id for flashcard in all_selected_flashcards]
+                ).distinct()[:reviewing_per_day - len(flashcards_to_study['review_flashcards'])]
 
-            # Se ainda não tiver flashcards suficientes, buscamos os próximos dias
-            if len(flashcards_to_study['learning_flashcards']) < learning_per_day:
-                # Buscando flashcards para o próximo dia "Learning" (até 5 dias à frente)
-                additional_learning_flashcards = FlashCard.objects.filter(
-                    id__in=deck_flashcard_ids
-                ).prefetch_related(
-                    'deckflashcard_set__userflashcards'
-                ).filter(
-                    deckflashcard__userflashcards__situation='Learning',
-                    deckflashcard__userflashcards__next_time__gte=now,
-                    deckflashcard__userflashcards__next_time__lte=now +
-                    timedelta(days=5)
-                )[:learning_per_day - len(flashcards_to_study['learning_flashcards'])]
-                flashcards_to_study['learning_flashcards'].extend(
-                    additional_learning_flashcards)
-
-            if len(flashcards_to_study['review_flashcards']) < reviewing_per_day:
-                # Buscando flashcards para o próximo dia "Reviewing" (até 3 dias à frente)
-                additional_review_flashcards = FlashCard.objects.filter(
-                    id__in=deck_flashcard_ids
-                ).prefetch_related(
-                    'deckflashcard_set__userflashcards'
-                ).filter(
-                    deckflashcard__userflashcards__situation='Reviewing',
-                    deckflashcard__userflashcards__next_time__gte=now,
-                    deckflashcard__userflashcards__next_time__lte=now +
-                    timedelta(days=3)
-                )[:reviewing_per_day - len(flashcards_to_study['review_flashcards'])]
-                flashcards_to_study['review_flashcards'].extend(
-                    additional_review_flashcards)
+                flashcards_to_study['review_flashcards'].extend(additional_review_flashcards)
+                all_selected_flashcards.update(additional_review_flashcards)
 
             response_data = []
             for situation, flashcards in flashcards_to_study.items():
@@ -383,6 +367,7 @@ def get_flashcards_for_study(request, deckId):
                     })
 
                     response_data.append(flashcard_data)
+
             deck_name = Deck.objects.filter(id=deckId).first()
             return JsonResponse({
                 'success': True,
