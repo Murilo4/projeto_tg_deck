@@ -101,7 +101,7 @@ def study_flashcard(request, flashcardId, deckId, star_rating):
                 user_flashcard.three_stars * weights[3] +
                 user_flashcard.four_stars * weights[4] +
                 user_flashcard.five_stars * weights[5] +
-                last_feedback_weight * 2  # Multiplicador adicional para última avaliação
+                last_feedback_weight * 2
             )
 
             total_counts = total_exhibitions + 2
@@ -119,15 +119,12 @@ def study_flashcard(request, flashcardId, deckId, star_rating):
         )
         flashcard_priority.priority = new_priority
 
-        # Calcular próxima data de estudo com base na prioridade e avaliações
-        # Base inicial para flashcards (nota 1 = 1 dia, nota 2 = 2 dias, ...)
         base_days = star_rating
         max_days = 15  # Máximo espaçamento
-        adjustment_factor = 0.6  # Fator de ajuste para reduzir espaçamento geral
+        adjustment_factor = 0.2  # Fator de ajuste para reduzir espaçamento geral
         next_study_days = base_days + \
             int((max_days - base_days) * (5 - new_priority) / 5 * adjustment_factor)
 
-        # Fator dinâmico de aumento do espaçamento ao longo do tempo (quanto mais fácil o flashcard, maior o aumento)
         # Tempo desde a última revisão
         reviewing_time = (timezone.now() - user_flashcard.last_time).days
         # Aumento gradual com o tempo (5% a cada 30 dias)
@@ -136,20 +133,22 @@ def study_flashcard(request, flashcardId, deckId, star_rating):
         # Aplicar fator dinâmico de aumento de espaçamento
         next_study_days = int(next_study_days * dynamic_factor)
 
-        # Garantir que o intervalo não ultrapasse o máximo de 15 dias
         next_study_days = min(next_study_days, max_days)
 
-        # Verificar se o usuário estudou antes da data marcada
-        if user_flashcard.last_time > flashcard_priority.date_to_study:
+        last_time = user_flashcard.last_time if user_flashcard.last_time else None
+        date_to_study = flashcard_priority.date_to_study if flashcard_priority.date_to_study else None
+
+        if last_time and date_to_study and last_time > date_to_study:
             next_study_days = max(next_study_days, base_days)
 
-        user_flashcard.next_time = timezone.now() + timezone.timedelta(days=next_study_days)
+        user_flashcard.next_time = timezone.now() + timezone.timedelta(
+            days=next_study_days)
+
         user_flashcard.save()
         flashcard_priority.date_to_study = timezone.now(
         ) + timezone.timedelta(days=next_study_days)
         flashcard_priority.save()
 
-        # Condições de finalização do flashcard
         if user_flashcard.situation == "Reviewing":
             if total_exhibitions >= 10 or (total_exhibitions >= 7 and next_study_days >= max_days):
                 user_flashcard.situation = "Finished"

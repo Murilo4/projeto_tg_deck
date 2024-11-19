@@ -71,8 +71,9 @@ class DeckFlashCard(models.Model):
 
 
 class FlashCardPriority(models.Model):
+    id = models.IntegerField(primary_key=True)
     deck_flashcard_id = models.IntegerField(null=False)
-    user_id = models.IntegerField(primary_key=True)
+    user_id = models.IntegerField()
     priority = models.DecimalField(max_digits=5, decimal_places=2)
     date_to_study = models.DateTimeField(default=None, null=True)
     created_at = models.DateTimeField(auto_now=True)
