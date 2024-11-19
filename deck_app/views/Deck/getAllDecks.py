@@ -97,13 +97,13 @@ def get_all_decks(request, page_number):
             )
 
             # Ordenação dos decks com base nos parâmetros
-            if order_by == 'newer':
+            if order_by == 'Newer':
                 decks = decks.order_by('-created_at')
-            elif order_by == 'older':
+            elif order_by == 'Older':
                 decks = decks.order_by('created_at')
-            elif order_by == 'lastModifications':
+            elif order_by == 'LastModifications':
                 decks = decks.order_by('-updated_at')
-            elif order_by == 'lastStudied':
+            elif order_by == 'LastStudied':
                 user_flashcards = UserFlashCard.objects.filter(user_id=user_id).values(
                     'deck_flashcard__deck_id'
                 ).annotate(
