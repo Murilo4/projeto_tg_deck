@@ -9,6 +9,8 @@ from django.db.models import Max, Case, When, Value, DateTimeField, Min
 from django.core.paginator import Paginator
 from ...validation.validation_jwt import validate_jwt
 from django.db.models import Count, Prefetch
+from ..Flashcards.create_flashcard import update_flashcard_data
+import threading
 
 
 @csrf_exempt
@@ -119,15 +121,17 @@ def get_all_decks(request, page_number):
                         output_field=DateTimeField()
                     )
                 ).order_by('-last_time', '-created_at')
-            elif order_by == 'flashcards':
+            elif order_by == 'Flashcards':
                 decks = decks.order_by('-flashcard_count')
 
             paginator = Paginator(decks, 10)
             page_obj = paginator.get_page(page_number)
 
-            # Formatação da resposta
             response_data = []
             for deck in page_obj:
+                threading.Thread(
+                        target=update_flashcard_data, args=(
+                            deck.id, user_id,)).start()
                 serializer = PersonDeckGetSerializer(deck)
                 serialized_deck = serializer.data
 
