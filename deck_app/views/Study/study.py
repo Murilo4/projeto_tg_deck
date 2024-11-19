@@ -11,6 +11,7 @@ from django.http import JsonResponse
 from ...validation.validation_jwt import validate_jwt
 from ...serializers_flashcard import FlashCardGetallSerializer
 from datetime import timedelta
+from collections import Counter
 
 
 @csrf_exempt
@@ -77,7 +78,7 @@ def study_flashcard(request, flashcardId, deckId, star_rating):
         )
 
         # Atualizar situação do flashcard
-        if user_flashcard.situation == "New" and total_exhibitions >= 1:
+        if user_flashcard.situation == "New":
             user_flashcard.situation = "Learning"
         elif user_flashcard.situation == "Learning" and total_exhibitions >= 5:
             user_flashcard.situation = "Reviewing"
@@ -112,11 +113,17 @@ def study_flashcard(request, flashcardId, deckId, star_rating):
                 'error': f'Erro ao calcular a prioridade: {str(e)}'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Atualizar FlashCardPriority
-        flashcard_priority, created = FlashCardPriority.objects.get_or_create(
+        flashcard_priority = FlashCardPriority.objects.filter(
             deck_flashcard_id=deck_flashcard.id,
             user_id=user_id
-        )
+        ).first()
+
+        if not flashcard_priority:
+            flashcard_priority = FlashCardPriority.objects.create(
+                deck_flashcard_id=deck_flashcard.id,
+                user_id=user_id,
+                priority=3.0
+            )
         flashcard_priority.priority = new_priority
 
         base_days = star_rating
