@@ -41,9 +41,8 @@ def get_all_decks(request, page_number):
             search_query = request.GET.get('search', None)
             deck_type_filter = request.GET.get('type', None)
 
-            # Busca UserStandardDeck para o usuário
-            user_decks = UserDeck.objects.filter(user_id=user_id).values_list(
-                'deck_id', flat=True)
+            # IDs dos decks que o usuário já possui
+            user_decks = UserDeck.objects.filter(user_id=user_id).values_list('deck_id', flat=True)
             deck_ids = list(user_decks)
 
             # Busca os decks associados
@@ -55,14 +54,11 @@ def get_all_decks(request, page_number):
 
             # Filtros adicionais de favoritos, learning e reviewing
             if favorite_filter == 'true':
-                decks = decks.filter(
-                    userdeck__user_id=user_id, userdeck__favorite=True)
+                decks = decks.filter(userdeck__user_id=user_id, userdeck__favorite=True)
             if learning_filter == 'true':
-                decks = decks.filter(
-                    userdeck__user_id=user_id, userdeck__learning=True)
+                decks = decks.filter(userdeck__user_id=user_id, userdeck__learning=True)
             if reviewing_filter == 'true':
-                decks = decks.filter(
-                    userdeck__user_id=user_id, userdeck__reviewing=True)
+                decks = decks.filter(userdeck__user_id=user_id, userdeck__reviewing=True)
 
             # Filtro de tipo de deck (Custom ou Standard), padrão é ambos
             if deck_type_filter:
@@ -73,7 +69,7 @@ def get_all_decks(request, page_number):
                     }, status=status.HTTP_400_BAD_REQUEST)
                 decks = decks.filter(type_deck=deck_type_filter)
 
-            # Anotando a contagem de flashcards diretamente na consulta
+            # Contagem de flashcards agora baseada na tabela DeckFlashcard
             decks = decks.annotate(
                 flashcard_count=Count('deckflashcard')
             )
@@ -90,13 +86,9 @@ def get_all_decks(request, page_number):
             flashcard_max = decks.aggregate(
                 Max('flashcard_count'))['flashcard_count__max'] or 0
 
-            user_decks = UserDeck.objects.filter(
-                user_id=user_id,
-                deck_id__in=deck_ids).only('deck_id',
-                                           'favorite',
-                                           'learning',
-                                           'reviewing',
-                                           'new')
+            # Pré-carregar dados adicionais relacionados aos decks do usuário
+            user_decks = UserDeck.objects.filter(user_id=user_id, deck_id__in=deck_ids).only(
+                'deck_id', 'favorite', 'learning', 'reviewing', 'new')
 
             decks = decks.prefetch_related(
                 Prefetch('userdeck_set', queryset=user_decks)
@@ -110,18 +102,14 @@ def get_all_decks(request, page_number):
             elif order_by == 'lastModifications':
                 decks = decks.order_by('-updated_at')
             elif order_by == 'lastStudied':
-                user_flashcards = UserFlashCard.objects.filter(
-                    user_id=user_id
-                ).values(
+                user_flashcards = UserFlashCard.objects.filter(user_id=user_id).values(
                     'deck_flashcard__deck_id'
                 ).annotate(
                     last_time=Max('last_time')
                 )
 
-                studied_decks = {
-                    uf['deck_flashcard__deck_id']: uf['last_time']
-                    for uf in user_flashcards
-                }
+                studied_decks = {uf['deck_flashcard__deck_id']: uf['last_time']
+                                 for uf in user_flashcards}
 
                 decks = decks.annotate(
                     last_time=Case(
