@@ -81,7 +81,7 @@ def get_standard_decks(request, page_number):
                 standard_decks = standard_decks.order_by('-updated_at')
             elif order_by == 'feedback':
                 standard_decks = standard_decks.order_by('-stars')
-            elif order_by == 'flashcard':
+            elif order_by == 'flashcards':
                 standard_decks = standard_decks.order_by('-flashcard_count')
 
             # Paginação dos resultados
