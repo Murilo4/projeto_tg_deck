@@ -73,11 +73,11 @@ def get_standard_decks(request, page_number):
             reviews_max = standard_decks.aggregate(Max('reviews'))['reviews__max'] or 0
 
             # Ordenação conforme especificado
-            if order_by == 'newest':
+            if order_by == 'newer':
                 standard_decks = standard_decks.order_by('-created_at')
-            elif order_by == 'oldest':
+            elif order_by == 'older':
                 standard_decks = standard_decks.order_by('created_at')
-            elif order_by == 'recentlyModified':
+            elif order_by == 'lastModifications':
                 standard_decks = standard_decks.order_by('-updated_at')
             elif order_by == 'feedback':
                 standard_decks = standard_decks.order_by('-stars')
