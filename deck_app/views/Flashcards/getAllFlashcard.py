@@ -158,8 +158,8 @@ def get_all_flashcard(request, page_number, deckId):
             return JsonResponse({
                 'success': True,
                 'message': 'dados retornados',
-                'deck': deck_name.title if deck_name else "Deck não encontrado",
-                'flashcards': response_data,
+                'deck': deck_name.title,
+                'flashcard': response_data,
                 'hasNext': page_obj.has_next(),
                 'hasPrevious': page_obj.has_previous(),
                 'pageNumber': page_number,
