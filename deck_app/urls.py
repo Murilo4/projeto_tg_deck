@@ -9,6 +9,7 @@ from .views.Deck.getMaxFlashcard import get_min_max_flashcard
 from .views.Deck.getStandardDeck import get_standard_decks
 from .views.Deck.getReviews import get_reviews
 from .views.Deck.getDeckToUser import get_all_decks_to_user
+from .views.Deck.getDeckType import get_deck_type
 from .views.Flashcards.create_flashcard import create_flashcard
 from .views.Flashcards.getAllFlashcard import get_all_flashcard
 from .views.Flashcards.updateFlashcard import update_flashcard
@@ -41,6 +42,9 @@ urlpatterns = [
 
     path('get-deck/<int:deckId>/',
          get_deck, name='get_deck'),
+
+    path("get-deck-type/<int:deckId>/",
+         get_deck_type, name="get_deck_type"),
 
     path("get-flashcard-values/",
          get_min_max_flashcard, name="get_min_max_flashcard"),
