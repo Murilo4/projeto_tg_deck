@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from decouple import config
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -129,12 +130,12 @@ CORS_ALLOWED_ORIGINS = [
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'flashvibe',
-        'USER': "avnadmin",
-        'PASSWORD': "AVNS_0Khaos0wypvibRolbho",
-        'HOST': "mysql-flashvibe-flashvibe.k.aivencloud.com",
-        'PORT': "14319",
+        'ENGINE': config('DB_ENGINE', default='django.db.models.backends.sqlite3'),
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432', cast=int),
         'OPTIONS': {
             'ssl': {
                 'ca': './ca.pem',
