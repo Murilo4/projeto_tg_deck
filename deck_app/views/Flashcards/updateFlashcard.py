@@ -8,7 +8,7 @@ from ...models import Example, Translation, Pronunciation, FlashcardPhoto, Flash
 from ...validation.validation_jwt import validate_jwt
 from django.db import transaction
 import re
-from .create_flashcard import upload_audio_from_url_to_firebase
+# from .create_flashcard import upload_audio_from_url_to_firebase
 from rest_framework.exceptions import ValidationError
 
 
