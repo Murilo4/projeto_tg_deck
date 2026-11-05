@@ -277,19 +277,18 @@ def create_flashcard(request, deckId):
             # AUTENTICAÇÃO JWT
             # ==========================================
 
-            # token = request.headers.get('Authorization')
+            token = request.headers.get('Authorization')
 
-            # if not token:
-            #     return JsonResponse({
-            #         'success': False,
-            #         'error': [
-            #             'Token de autorização ausente. Faça login novamente.'
-            #         ]
-            #     }, status=status.HTTP_401_UNAUTHORIZED)
+            if not token:
+                return JsonResponse({
+                    'success': False,
+                    'error': [
+                        'Token de autorização ausente. Faça login novamente.'
+                    ]
+                }, status=status.HTTP_401_UNAUTHORIZED)
 
-            # jwt_data = validate_jwt(token)
-            # user_id = jwt_data.get('id')
-            user_id = 1
+            jwt_data = validate_jwt(token)
+            user_id = jwt_data.get('id')
 
             if not user_id:
                 return JsonResponse({
