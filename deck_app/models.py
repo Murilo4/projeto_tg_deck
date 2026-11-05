@@ -38,14 +38,14 @@ class UserDeck(models.Model):
         unique_together = (('user_id', 'deck_id'),)
         db_table = 'user_deck'
 
-
 class Example(models.Model):
-    id = models.IntegerField(primary_key=True)
+    id = models.AutoField(primary_key=True)
     text_example = models.CharField(max_length=255)
-    created_at = models.DateTimeField(auto_now=True)
-    updated_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        managed = False
         db_table = 'example'
 
 
