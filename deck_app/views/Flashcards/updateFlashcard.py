@@ -429,29 +429,29 @@ def process_pr(pr_data, deck_flashcard):
                 if verify.exists():
                     exists.add(existing_pr.id)
                     pr_exist_ids.add(existing_pr.id)
-            else:
-                try:
-                    firebase_audio_url = upload_audio_from_url_to_firebase(
-                        pr_link, pr_text, country, sex, voice_name)
-                    # Agora criamos a pronúncia com o novo áudio no Firebase
-                    new_pr = Pronunciation(
-                        keyword=pr_text,
-                        audio_url=firebase_audio_url,
-                    )
-                    new_pr.save()
+            # else:
+            #     try:
+            #         # firebase_audio_url = upload_audio_from_url_to_firebase(
+            #         #     pr_link, pr_text, country, sex, voice_name)
+            #         # Agora criamos a pronúncia com o novo áudio no Firebase
+            #         # new_pr = Pronunciation(
+            #         #     keyword=pr_text,
+            #         #     audio_url=firebase_audio_url,
+            #         # )
+            #         # new_pr.save()
 
-                    created_pr = Pronunciation.objects.filter(
-                        keyword=pr_text,
-                        audio_url=firebase_audio_url).first()
+            #         # created_pr = Pronunciation.objects.filter(
+            #         #     keyword=pr_text,
+            #         #     audio_url=firebase_audio_url).first()
 
-                    exists.add(created_pr.id)
-                    pr_exist_ids.add(created_pr.id)
+            #         # exists.add(created_pr.id)
+            #         # pr_exist_ids.add(created_pr.id)
 
-                    new_prs.append(new_pr)
+            #         # new_prs.append(new_pr)
 
-                except Exception as e:
-                    raise ValidationError(
-                        f"Erro ao salvar pronúncia: {str(e)}")
+            #     except Exception as e:
+            #         raise ValidationError(
+            #             f"Erro ao salvar pronúncia: {str(e)}")
 
     return exists, new_prs, pr_exist_ids
 
