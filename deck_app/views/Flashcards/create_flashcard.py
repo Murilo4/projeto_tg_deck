@@ -746,26 +746,26 @@ def create_flashcard(request, deckId):
                                                  "error": ["Palavra-chave não encontrada"]},
                                                 status=status.HTTP_404_NOT_FOUND)
 
-                        try:
-                            firebase_audio_url = upload_audio_from_url_to_firebase(
-                                audio_url, keyword, country, sex, voice_name)
-                        except Exception as e:
-                            return JsonResponse({
-                                "success": False,
-                                "error": str(e)},
-                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                        # try:
+                        #     firebase_audio_url = upload_audio_from_url_to_firebase(
+                        #         audio_url, keyword, country, sex, voice_name)
+                        # except Exception as e:
+                        #     return JsonResponse({
+                        #         "success": False,
+                        #         "error": str(e)},
+                        #         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                         # Salvar a pronúncia no banco de dados
                         pronunciation = Pronunciation.objects.filter(
-                            keyword=keyword, audio_url=firebase_audio_url).first()
+                            keyword=keyword, audio_url=audio_url).first()
                         if not pronunciation:
                             pronunciation = Pronunciation(
                                 keyword=keyword,
-                                audio_url=firebase_audio_url)
+                                audio_url=audio_url)
                             pronunciation.save()
                             pronunciation = Pronunciation.objects.filter(
                                 keyword=keyword,
-                                audio_url=firebase_audio_url).first()
+                                audio_url=audio_url).first()
 
                         DeckFlashcardPronunciation.objects.create(
                             pronunciation=pronunciation,
@@ -953,26 +953,26 @@ def create_multiple_flashcard(request, deckId):
                                 status=status.HTTP_404_NOT_FOUND)
 
                         # Fazer o upload do áudio para o Firebase
-                        try:
-                            firebase_audio_url = upload_audio_from_url_to_firebase(
-                                audio_url, keyword, country, sex, voice_name)
-                        except Exception as e:
-                            return JsonResponse({
-                                "success": False,
-                                "error": str(e)},
-                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                        # try:
+                        #     firebase_audio_url = upload_audio_from_url_to_firebase(
+                        #         audio_url, keyword, country, sex, voice_name)
+                        # except Exception as e:
+                        #     return JsonResponse({
+                        #         "success": False,
+                        #         "error": str(e)},
+                        #         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                         # Salvar a pronúncia no banco de dados
                         pronunciation = Pronunciation.objects.filter(
-                            keyword=keyword, audio_url=firebase_audio_url).first()
+                            keyword=keyword, audio_url=audio_url).first()
                         if not pronunciation:
                             pronunciation = Pronunciation(
                                 keyword=keyword,
-                                audio_url=firebase_audio_url)
+                                audio_url=audio_url)
                             pronunciation.save()
                             pronunciation = Pronunciation.objects.filter(
                                 keyword=keyword,
-                                audio_url=firebase_audio_url).first()
+                                audio_url=audio_url).first()
 
                         DeckFlashcardPronunciation.objects.create(
                             pronunciation=pronunciation,
