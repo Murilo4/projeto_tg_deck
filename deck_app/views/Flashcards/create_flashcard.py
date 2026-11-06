@@ -940,13 +940,10 @@ def create_multiple_flashcard(request, deckId):
                     pronunciations = request.data.get('pronunciations', [])
                     for pronunciation_data in pronunciations:
                         audio_url = pronunciation_data.get('audioUrl')
-                        country = pronunciation_data.get(
-                            'country')  # País de origem
-                        sex = pronunciation_data.get('sex')  # Sexo da voz
                         voice_name = pronunciation_data.get(
                             'voiceName')  # Nome da voz
 
-                        if not audio_url or not country or not sex or not voice_name:
+                        if not audio_url or not voice_name:
                             return JsonResponse({
                                 "success": False,
                                 "error": "Informações da pronúncia inválidas"},
