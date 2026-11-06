@@ -1,11 +1,11 @@
 # import requests
 # import json
 # from textblob import Word
-# from rest_framework.decorators import api_view
-# from django.http import JsonResponse
+from rest_framework.decorators import api_view
+from django.http import JsonResponse
 # from reverso_api.context import ReversoContextAPI
-# from django.views.decorators.csrf import csrf_exempt
-# from rest_framework import status
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework import status
 # import os
 # import re
 
@@ -113,7 +113,112 @@
 #         return JsonResponse({"success": False,
 #                              "error": [str(e)]},
 #                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+STATIC_TRANSLATIONS = {
 
+    "hey": [
+        "Ei",
+        "Oi"
+    ],
+
+    "thanks": [
+        "Obrigado",
+        "Obrigada",
+        "Valeu"
+    ],
+
+    "please": [
+        "Por favor"
+    ],
+
+    "sorry": [
+        "Desculpa",
+        "Sinto muito"
+    ],
+
+    "maybe": [
+        "Talvez",
+        "Pode ser"
+    ],
+
+    "really": [
+        "Sério",
+        "Realmente",
+        "De verdade"
+    ],
+
+    "sure": [
+        "Claro",
+        "Com certeza"
+    ],
+
+    "actually": [
+        "Na verdade",
+        "Na realidade"
+    ],
+
+    "guess": [
+        "Acho",
+        "Imagino",
+        "Suponho"
+    ],
+
+    "anyway": [
+        "Enfim",
+        "De qualquer forma"
+    ]
+
+}
+
+@csrf_exempt
+@api_view(['POST'])
+def get_translated_word(request):
+
+    try:
+
+        word = request.data.get('word')
+
+        if not word:
+            return JsonResponse({
+                'success': False,
+                'error': ['A palavra é obrigatória.']
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Normaliza a palavra recebida
+        word = word.strip().lower()
+
+        # Busca a palavra no dicionário estático
+        translations = STATIC_TRANSLATIONS.get(word)
+
+        # Caso a palavra não exista
+        if translations is None:
+            return JsonResponse({
+                'success': False,
+                'error': ['Palavra não encontrada na base de traduções.'],
+                'word': word
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Formata as traduções
+        formatted_translations = [
+            {
+                "sourceWord": word,
+                "translation": translation
+            }
+            for translation in translations
+        ]
+
+        return JsonResponse({
+            'success': True,
+            'message': ['Palavra traduzida com sucesso.'],
+            'word': word,
+            'translations': formatted_translations
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+
+        return JsonResponse({
+            'success': False,
+            'error': [f'Erro ao buscar traduções: {str(e)}']
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # @csrf_exempt
 # @api_view(['POST'])
@@ -234,6 +339,109 @@
 #                                  'error': f"Erro ao buscar frases: {str(e)}"},
 #                                 status=status.HTTP_404_NOT_FOUND)
 
+STATIC_EXAMPLES = {
+    "hey": [
+        "Hey, how are you doing?",
+        "Hey, do you have a minute?"
+    ],
+
+    "thanks": [
+        "Thanks for helping me!",
+        "Thanks, I really appreciate it."
+    ],
+
+    "please": [
+        "Can you help me, please?",
+        "Please, give me a second."
+    ],
+
+    "sorry": [
+        "Sorry, I'm a little late.",
+        "I'm sorry, I didn't mean that."
+    ],
+
+    "maybe": [
+        "Maybe we can go tomorrow.",
+        "Maybe you're right."
+    ],
+
+    "really": [
+        "Do you really think so?",
+        "I really like this place."
+    ],
+
+    "sure": [
+        "Sure, no problem!",
+        "Are you sure about that?"
+    ],
+
+    "actually": [
+        "Actually, I have a different idea.",
+        "I actually wanted to ask you something."
+    ],
+
+    "guess": [
+        "I guess you're right.",
+        "I guess I'll see you tomorrow."
+    ],
+
+    "anyway": [
+        "Anyway, what were you saying?",
+        "Anyway, I have to go now."
+    ]
+}
+
+
+@csrf_exempt
+@api_view(['POST'])
+def get_example_sentences(request):
+
+    try:
+
+        word = request.data.get('word')
+
+        if not word:
+            return JsonResponse({
+                'success': False,
+                'error': 'A palavra é obrigatória.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Normaliza a palavra recebida
+        word = word.strip().lower()
+
+        # Busca os exemplos no dicionário estático
+        examples_list = STATIC_EXAMPLES.get(word)
+
+        # Caso a palavra não exista
+        if examples_list is None:
+            return JsonResponse({
+                'success': False,
+                'message': 'Nenhum exemplo encontrado.',
+                'word': word,
+                'examples': []
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Formata os exemplos
+        examples = [
+            {
+                "sourceSentence": sentence
+            }
+            for sentence in examples_list
+        ]
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Frases de exemplo obtidas com sucesso.',
+            'word': word,
+            'examples': examples
+        }, status=status.HTTP_200_OK)
+
+    except Exception as e:
+
+        return JsonResponse({
+            'success': False,
+            'error': f'Erro ao buscar frases: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 # def remove_html_tags(text):
 #     return re.sub(r'<.*?>', '', text)  # Usando regex para remover tags HTML
