@@ -15,7 +15,7 @@ from .views.Flashcards.getAllFlashcard import get_all_flashcard
 from .views.Flashcards.updateFlashcard import update_flashcard
 from .views.Flashcards.getOneFlashcard import get_one_flashcard
 from .views.Flashcards.DeleteFlashcard import delete_flashcard
-# from .views.Audio.text import get_translated_word, get_example_sentences
+from .views.Audio.text import get_translated_word, get_example_sentences
 # from .views.Audio.text import get_correct_word, get_correct_phrase
 # from .views.Audio.audio import get_pronunciations
 from .views.Study.study import get_flashcards_for_study, study_flashcard
@@ -78,11 +78,11 @@ urlpatterns = [
     path("create-multiple-flashcard/",
          create_multiple_flashcard, name="create_multiple_flashcard"),
 
-#     path("get-translated-word/",
-#          get_translated_word, name="get_translated_word"),
+    path("get-translated-word/",
+        get_translated_word, name="get_translated_word"),
 
-#     path("get-example-sentences/",
-#          get_example_sentences, name="get_example_sentences"),
+    path("get-example-sentences/",
+         get_example_sentences, name="get_example_sentences"),
 
 #     path('get-correct-word/',
 #          get_correct_word, name="get_correct_word"),
