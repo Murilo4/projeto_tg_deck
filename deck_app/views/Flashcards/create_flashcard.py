@@ -245,365 +245,365 @@ def normalize_text(text):
 # CRIAR FLASHCARD
 # ==========================================
 
-@csrf_exempt
-@api_view(['POST'])
-def create_flashcard(request, deckId):
+# @csrf_exempt
+# @api_view(['POST'])
+# def create_flashcard(request, deckId):
 
-    if request.method == "POST":
+#     if request.method == "POST":
 
-        try:
+#         try:
 
-            # ==========================================
-            # EXTRAIR DADOS DA REQUISIÇÃO
-            # ==========================================
+#             # ==========================================
+#             # EXTRAIR DADOS DA REQUISIÇÃO
+#             # ==========================================
 
-            keyword = request.data.get('keyword')
-            main_phrase = request.data.get('mainPhrase')
+#             keyword = request.data.get('keyword')
+#             main_phrase = request.data.get('mainPhrase')
 
-            if not keyword:
-                return JsonResponse({
-                    "success": False,
-                    "error": "Palavra chave não encontrada"
-                }, status=status.HTTP_400_BAD_REQUEST)
+#             if not keyword:
+#                 return JsonResponse({
+#                     "success": False,
+#                     "error": "Palavra chave não encontrada"
+#                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            if not main_phrase:
-                return JsonResponse({
-                    "success": False,
-                    "error": "Frase não encontrada"
-                }, status=status.HTTP_400_BAD_REQUEST)
-
-
-            # ==========================================
-            # AUTENTICAÇÃO JWT
-            # ==========================================
-
-            token = request.headers.get('Authorization')
-
-            if not token:
-                return JsonResponse({
-                    'success': False,
-                    'error': [
-                        'Token de autorização ausente. Faça login novamente.'
-                    ]
-                }, status=status.HTTP_401_UNAUTHORIZED)
-
-            jwt_data = validate_jwt(token)
-            user_id = jwt_data.get('id')
-
-            if not user_id:
-                return JsonResponse({
-                    "success": False,
-                    "error": "Usuario não encontrado"
-                }, status=status.HTTP_401_UNAUTHORIZED)
+#             if not main_phrase:
+#                 return JsonResponse({
+#                     "success": False,
+#                     "error": "Frase não encontrada"
+#                 }, status=status.HTTP_400_BAD_REQUEST)
 
 
-            # ==========================================
-            # NORMALIZAR PALAVRAS E FRASES
-            # ==========================================
+#             # ==========================================
+#             # AUTENTICAÇÃO JWT
+#             # ==========================================
 
-            normalized_keyword = normalize_text(keyword)
-            normalized_phrase = normalize_text(main_phrase)
+#             token = request.headers.get('Authorization')
 
+#             if not token:
+#                 return JsonResponse({
+#                     'success': False,
+#                     'error': [
+#                         'Token de autorização ausente. Faça login novamente.'
+#                     ]
+#                 }, status=status.HTTP_401_UNAUTHORIZED)
 
-            # ==========================================
-            # BUSCAR TRADUÇÕES ESTÁTICAS
-            # ==========================================
+#             jwt_data = validate_jwt(token)
+#             user_id = jwt_data.get('id')
 
-            translations_found = []
-
-            translations_found.extend(
-                STATIC_TRANSLATIONS.get(normalized_keyword, [])
-            )
-
-            translations_found.extend(
-                STATIC_TRANSLATIONS.get(normalized_phrase, [])
-            )
-
-            # Remover traduções duplicadas
-            translations_found = list(
-                dict.fromkeys(translations_found)
-            )
+#             if not user_id:
+#                 return JsonResponse({
+#                     "success": False,
+#                     "error": "Usuario não encontrado"
+#                 }, status=status.HTTP_401_UNAUTHORIZED)
 
 
-            # ==========================================
-            # BUSCAR FRASES DE USO ESTÁTICAS
-            # ==========================================
+#             # ==========================================
+#             # NORMALIZAR PALAVRAS E FRASES
+#             # ==========================================
 
-            static_examples = STATIC_EXAMPLES.get(
-                normalized_keyword, []
-            )
+#             normalized_keyword = normalize_text(keyword)
+#             normalized_phrase = normalize_text(main_phrase)
+
+
+#             # ==========================================
+#             # BUSCAR TRADUÇÕES ESTÁTICAS
+#             # ==========================================
+
+#             translations_found = []
+
+#             translations_found.extend(
+#                 STATIC_TRANSLATIONS.get(normalized_keyword, [])
+#             )
+
+#             translations_found.extend(
+#                 STATIC_TRANSLATIONS.get(normalized_phrase, [])
+#             )
+
+#             # Remover traduções duplicadas
+#             translations_found = list(
+#                 dict.fromkeys(translations_found)
+#             )
+
+
+#             # ==========================================
+#             # BUSCAR FRASES DE USO ESTÁTICAS
+#             # ==========================================
+
+#             static_examples = STATIC_EXAMPLES.get(
+#                 normalized_keyword, []
+#             )
             
 
-            # Converter para o formato utilizado pelo frontend
-            examples_found = [
-                {"textExample": example}
-                for example in static_examples
+#             # Converter para o formato utilizado pelo frontend
+#             examples_found = [
+#                 {"textExample": example}
+#                 for example in static_examples
                     
-            ]
+#             ]
 
-            # Manter também os exemplos enviados pelo frontend
-            frontend_examples = request.data.get('examples', [])
+#             # Manter também os exemplos enviados pelo frontend
+#             frontend_examples = request.data.get('examples', [])
 
-            examples_found.extend(frontend_examples)
+#             examples_found.extend(frontend_examples)
 
-            # Remover exemplos duplicados
-            unique_examples = []
-            seen_examples = set()
+#             # Remover exemplos duplicados
+#             unique_examples = []
+#             seen_examples = set()
            
 
-            for example_data in examples_found:
+#             for example_data in examples_found:
                 
-                text_example = example_data.get('textExample')
+#                 text_example = example_data.get('textExample')
 
-                if text_example and text_example not in seen_examples:
-                    seen_examples.add(text_example)
-                    unique_examples.append(example_data)
+#                 if text_example and text_example not in seen_examples:
+#                     seen_examples.add(text_example)
+#                     unique_examples.append(example_data)
                    
 
 
-            # ==========================================
-            # INICIAR TRANSAÇÃO
-            # ==========================================
+#             # ==========================================
+#             # INICIAR TRANSAÇÃO
+#             # ==========================================
 
-            with transaction.atomic():
+#             with transaction.atomic():
 
-                # ==========================================
-                # CRIAR FLASHCARD
-                # ==========================================
+#                 # ==========================================
+#                 # CRIAR FLASHCARD
+#                 # ==========================================
 
-                flashcard_data = {
-                    "keyword": keyword,
-                    "main_phrase": main_phrase
-                }
+#                 flashcard_data = {
+#                     "keyword": keyword,
+#                     "main_phrase": main_phrase
+#                 }
 
-                flashcard_serializer = CreateFlashCardSerializer(
-                    data=flashcard_data
-                )
+#                 flashcard_serializer = CreateFlashCardSerializer(
+#                     data=flashcard_data
+#                 )
 
-                if flashcard_serializer.is_valid():
+#                 if flashcard_serializer.is_valid():
 
-                    flashcard = flashcard_serializer.save()
+#                     flashcard = flashcard_serializer.save()
 
 
-                    # ==========================================
-                    # CRIAR RELAÇÃO COM O DECK
-                    # ==========================================
+#                     # ==========================================
+#                     # CRIAR RELAÇÃO COM O DECK
+#                     # ==========================================
 
-                    deck_flashcard = DeckFlashCard.objects.create(
-                        flashcard=flashcard,
-                        deck_id=deckId
-                    )
+#                     deck_flashcard = DeckFlashCard.objects.create(
+#                         flashcard=flashcard,
+#                         deck_id=deckId
+#                     )
 
 
-                    # ==========================================
-                    # RELACIONAR USUÁRIO AO FLASHCARD
-                    # ==========================================
+#                     # ==========================================
+#                     # RELACIONAR USUÁRIO AO FLASHCARD
+#                     # ==========================================
 
-                    UserFlashCard.objects.create(
-                        deck_flashcard=deck_flashcard,
-                        user_id=user_id,
-                        situation="New"
-                    )
+#                     UserFlashCard.objects.create(
+#                         deck_flashcard=deck_flashcard,
+#                         user_id=user_id,
+#                         situation="New"
+#                     )
 
 
-                    # ==========================================
-                    # PROCESSAR EXEMPLOS ESTÁTICOS E DO FRONTEND
-                    # ==========================================
+#                     # ==========================================
+#                     # PROCESSAR EXEMPLOS ESTÁTICOS E DO FRONTEND
+#                     # ==========================================
 
-                    for example_data in unique_examples:
-                        print(f"Processando exemplo único: {example_data}")
-                        text_example = example_data.get('textExample')
+#                     for example_data in unique_examples:
+#                         print(f"Processando exemplo único: {example_data}")
+#                         text_example = example_data.get('textExample')
 
-                        if not text_example:
-                            return JsonResponse({
-                                "success": False,
-                                "error": ["Exemplo inválido"]
-                            }, status=status.HTTP_400_BAD_REQUEST)
+#                         if not text_example:
+#                             return JsonResponse({
+#                                 "success": False,
+#                                 "error": ["Exemplo inválido"]
+#                             }, status=status.HTTP_400_BAD_REQUEST)
 
 
-                        # Buscar exemplo existente
-                        example = Example.objects.filter(
-                            text_example=text_example
-                        ).first()
-                        print(f"Exemplo encontrado: {example}")
+#                         # Buscar exemplo existente
+#                         example = Example.objects.filter(
+#                             text_example=text_example
+#                         ).first()
+#                         print(f"Exemplo encontrado: {example}")
 
 
-                        # Criar exemplo caso não exista
-                        if not example:
+#                         # Criar exemplo caso não exista
+#                         if not example:
 
-                            example_data = {
-                                'text_example': text_example
-                            }
+#                             example_data = {
+#                                 'text_example': text_example
+#                             }
 
-                            example_serializer = ExampleCreateSerializer(
-                                data=example_data
-                            )
+#                             example_serializer = ExampleCreateSerializer(
+#                                 data=example_data
+#                             )
 
-                            print("Dados enviados ao serializer:", example_data)
+#                             print("Dados enviados ao serializer:", example_data)
 
-                            example_serializer.is_valid(raise_exception=True)
+#                             example_serializer.is_valid(raise_exception=True)
 
-                            example = example_serializer.save()
+#                             example = example_serializer.save()
 
-                            print("Exemplo criado:", example)
-                            print("ID do exemplo criado:", example.id)
+#                             print("Exemplo criado:", example)
+#                             print("ID do exemplo criado:", example.id)
 
 
-                        # Criar relação entre exemplo e flashcard
-                        new_deck_flashcard_example = {
-                            "example": example.id,
-                            "deck_flashcard": deck_flashcard.id
-                        }
+#                         # Criar relação entre exemplo e flashcard
+#                         new_deck_flashcard_example = {
+#                             "example": example.id,
+#                             "deck_flashcard": deck_flashcard.id
+#                         }
 
-                        flashcard_ex_serializer = (
-                            DeckFlashcardExampleSerializer(
-                                data=new_deck_flashcard_example
-                            )
-                        )
+#                         flashcard_ex_serializer = (
+#                             DeckFlashcardExampleSerializer(
+#                                 data=new_deck_flashcard_example
+#                             )
+#                         )
 
-                        if flashcard_ex_serializer.is_valid(
-                            raise_exception=True
-                        ):
-                            flashcard_ex_serializer.save()
+#                         if flashcard_ex_serializer.is_valid(
+#                             raise_exception=True
+#                         ):
+#                             flashcard_ex_serializer.save()
 
 
-                    # ==========================================
-                    # PROCESSAR TRADUÇÕES ESTÁTICAS
-                    # ==========================================
+#                     # ==========================================
+#                     # PROCESSAR TRADUÇÕES ESTÁTICAS
+#                     # ==========================================
 
-                    for text_translation in translations_found:
+#                     for text_translation in translations_found:
 
-                        # Buscar tradução existente
-                        translation = Translation.objects.filter(
-                            text_translation=text_translation
-                        ).first()
+#                         # Buscar tradução existente
+#                         translation = Translation.objects.filter(
+#                             text_translation=text_translation
+#                         ).first()
 
 
-                        # Criar tradução caso não exista
-                        if not translation:
+#                         # Criar tradução caso não exista
+#                         if not translation:
 
-                            translation_data = {
-                                'text_translation': text_translation
-                            }
+#                             translation_data = {
+#                                 'text_translation': text_translation
+#                             }
 
-                            translation_serializer = (
-                                TranslationCreateSerializer(
-                                    data=translation_data
-                                )
-                            )
+#                             translation_serializer = (
+#                                 TranslationCreateSerializer(
+#                                     data=translation_data
+#                                 )
+#                             )
 
-                            if translation_serializer.is_valid(
-                                raise_exception=True
-                            ):
+#                             if translation_serializer.is_valid(
+#                                 raise_exception=True
+#                             ):
 
-                                translation = translation_serializer.save()
+#                                 translation = translation_serializer.save()
 
 
-                        # Criar relação entre tradução e flashcard
-                        new_deck_flashcard_translation = {
-                            "translation": translation.id,
-                            "deck_flashcard": deck_flashcard.id
-                        }
+#                         # Criar relação entre tradução e flashcard
+#                         new_deck_flashcard_translation = {
+#                             "translation": translation.id,
+#                             "deck_flashcard": deck_flashcard.id
+#                         }
 
-                        translation_serializer = (
-                            DeckFlashcardTranslationSerializer(
-                                data=new_deck_flashcard_translation
-                            )
-                        )
+#                         translation_serializer = (
+#                             DeckFlashcardTranslationSerializer(
+#                                 data=new_deck_flashcard_translation
+#                             )
+#                         )
 
-                        if translation_serializer.is_valid(
-                            raise_exception=True
-                        ):
-                            translation_serializer.save()
+#                         if translation_serializer.is_valid(
+#                             raise_exception=True
+#                         ):
+#                             translation_serializer.save()
 
 
-                    # ==========================================
-                    # PROCESSAR IMAGENS RECEBIDAS DO FRONTEND
-                    # ==========================================
+#                     # ==========================================
+#                     # PROCESSAR IMAGENS RECEBIDAS DO FRONTEND
+#                     # ==========================================
 
-                    images = request.data.get('images', [])
+#                     images = request.data.get('images', [])
 
-                    for image_data in images:
+#                     for image_data in images:
 
-                        image_url = image_data.get('imageUrl')
-                        file_description = image_data.get('description')
+#                         image_url = image_data.get('imageUrl')
+#                         file_description = image_data.get('description')
 
-                        if not image_url or not file_description:
-                            return JsonResponse({
-                                "success": False,
-                                "error": ["Imagem inválida"]
-                            }, status=status.HTTP_400_BAD_REQUEST)
+#                         if not image_url or not file_description:
+#                             return JsonResponse({
+#                                 "success": False,
+#                                 "error": ["Imagem inválida"]
+#                             }, status=status.HTTP_400_BAD_REQUEST)
 
 
-                        # Verificar se a imagem já existe
-                        photo = FlashcardPhoto.objects.filter(
-                            deck_flashcard_id=deck_flashcard.id,
-                            file_url=image_url,
-                            file_description=file_description
-                        ).first()
+#                         # Verificar se a imagem já existe
+#                         photo = FlashcardPhoto.objects.filter(
+#                             deck_flashcard_id=deck_flashcard.id,
+#                             file_url=image_url,
+#                             file_description=file_description
+#                         ).first()
 
+#                          )
 
-                        # Criar imagem caso não exista
-                        if not photo:
+#                             image.save()
 
-                            image = FlashcardPhoto(
-                                deck_flashcard_id=deck_flashcard.id,
-                                file_url=image_url,
-                                file_description=file_description
-                            )
 
-                            image.save()
+#                     # ==========================================
+#                     # ATUALIZAR DADOS DO FLASHCARD
+#                     # ==========================================
 
+#                     threading.Thread(
+#                         target=update_flashcard_data,
+#                         args=(deckId, user_id)
+#                     ).start()
 
-                    # ==========================================
-                    # ATUALIZAR DADOS DO FLASHCARD
-                    # ==========================================
 
-                    threading.Thread(
-                        target=update_flashcard_data,
-                        args=(deckId, user_id)
-                    ).start()
+#                     # ==========================================
+#                     # RETORNAR SUCESSO
+#                     # ==========================================
 
+#                     return JsonResponse({
+#                         "success": True,
+#                         "message": [
+#                             "Flashcard criado com sucesso"
+#                         ]
+#                     }, status=status.HTTP_201_CREATED)
 
-                    # ==========================================
-                    # RETORNAR SUCESSO
-                    # ==========================================
 
-                    return JsonResponse({
-                        "success": True,
-                        "message": [
-                            "Flashcard criado com sucesso"
-                        ]
-                    }, status=status.HTTP_201_CREATED)
+#                 return JsonResponse({
+#                     "success": False,
+#                     "error": [
+#                         flashcard_serializer.errors
+#                     ]
+#                 }, status=status.HTTP_400_BAD_REQUEST)
 
 
-                return JsonResponse({
-                    "success": False,
-                    "error": [
-                        flashcard_serializer.errors
-                    ]
-                }, status=status.HTTP_400_BAD_REQUEST)
+#         except Exception as e:
 
+#             return JsonResponse({
+#                 'success': False,
+#                 'error': f'Erro: {str(e)}'
+#             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        except Exception as e:
 
-            return JsonResponse({
-                'success': False,
-                'error': f'Erro: {str(e)}'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+#     else:
 
+#         return JsonResponse({
+#             "success": False,
+#             "error": ["Metodo não autorizado"]
+#         }, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+#                         # Criar imagem caso não exista
+#                         if not photo:
 
-    else:
-
-        return JsonResponse({
-            "success": False,
-            "error": ["Metodo não autorizado"]
-        }, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+#                             image = FlashcardPhoto(
+#                                 deck_flashcard_id=deck_flashcard.id,
+#                                 file_url=image_url,
+#                                 file_description=file_description
+   
 
 
 @csrf_exempt
 @api_view(['POST'])
-def create_flashcard_2(request, deckId):
+def create_flashcard(request, deckId):
     if request.method == "POST":
         try:
             # Extrair dados da requisição
