@@ -246,6 +246,7 @@ def normalize_text(text):
 # ==========================================
 
 
+
 @csrf_exempt
 @api_view(['POST'])
 def create_flashcard(request, deckId):
@@ -283,7 +284,9 @@ def create_flashcard(request, deckId):
         if not token:
             return JsonResponse({
                 "success": False,
-                "error": "Token de autorização ausente"
+                "error": [
+                    "Token de autorização ausente. Faça login novamente."
+                ]
             }, status=status.HTTP_401_UNAUTHORIZED)
 
         jwt_data = validate_jwt(token)
@@ -292,25 +295,25 @@ def create_flashcard(request, deckId):
         if not user_id:
             return JsonResponse({
                 "success": False,
-                "error": "Usuário não encontrado"
+                "error": "Usuario não encontrado"
             }, status=status.HTTP_401_UNAUTHORIZED)
 
         # ==========================================
-        # 3. VALIDAR DADOS RELACIONADOS
+        # 3. VALIDAR DADOS RECEBIDOS
         # ==========================================
 
         for item in examples:
             if not item.get('textExample'):
                 return JsonResponse({
                     "success": False,
-                    "error": "Exemplo inválido"
+                    "error": ["Exemplo inválido"]
                 }, status=status.HTTP_400_BAD_REQUEST)
 
         for item in translations:
             if not item.get('textTranslation'):
                 return JsonResponse({
                     "success": False,
-                    "error": "Tradução inválida"
+                    "error": ["Tradução inválida"]
                 }, status=status.HTTP_400_BAD_REQUEST)
 
         for item in pronunciations:
@@ -324,33 +327,35 @@ def create_flashcard(request, deckId):
             if not item.get('imageUrl') or not item.get('description'):
                 return JsonResponse({
                     "success": False,
-                    "error": "Imagem inválida"
+                    "error": ["Imagem inválida"]
                 }, status=status.HTTP_400_BAD_REQUEST)
 
         # ==========================================
-        # 4. CRIAR APENAS UM FLASHCARD
+        # 4. CRIAR UM ÚNICO FLASHCARD
         # ==========================================
 
         with transaction.atomic():
 
+            flashcard_data = {
+                "keyword": keyword,
+                "main_phrase": main_phrase
+            }
+
             flashcard_serializer = CreateFlashCardSerializer(
-                data={
-                    "keyword": keyword,
-                    "main_phrase": main_phrase
-                }
+                data=flashcard_data
             )
 
             if not flashcard_serializer.is_valid():
                 return JsonResponse({
                     "success": False,
-                    "error": flashcard_serializer.errors
+                    "error": [flashcard_serializer.errors]
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            # ÚNICA criação de flashcard nesta API
+            # Cria somente um flashcard
             flashcard = flashcard_serializer.save()
 
             # ==========================================
-            # 5. VINCULAR AO DECK
+            # 5. CRIAR RELAÇÃO COM O DECK
             # ==========================================
 
             deck_flashcard = DeckFlashCard.objects.create(
@@ -359,7 +364,7 @@ def create_flashcard(request, deckId):
             )
 
             # ==========================================
-            # 6. VINCULAR AO USUÁRIO
+            # 6. CRIAR RELAÇÃO COM O USUÁRIO
             # ==========================================
 
             UserFlashCard.objects.create(
@@ -369,79 +374,94 @@ def create_flashcard(request, deckId):
             )
 
             # ==========================================
-            # 7. SALVAR EXEMPLOS
+            # 7. PROCESSAR EXEMPLOS
             # ==========================================
 
-            for item in examples:
-                text_example = item.get('textExample')
+            for example_data in examples:
+
+                text_example = example_data.get('textExample')
 
                 example = Example.objects.filter(
                     text_example=text_example
                 ).first()
 
                 if not example:
-                    example_serializer = ExampleCreateSerializer(
+                    serializer = ExampleCreateSerializer(
                         data={
-                            "text_example": text_example
+                            'text_example': text_example
                         }
                     )
 
-                    example_serializer.is_valid(raise_exception=True)
-                    example = example_serializer.save()
+                    serializer.is_valid(raise_exception=True)
+                    example = serializer.save()
 
-                DeckFlashcardExampleSerializer(
-                    data={
-                        "example": example.id,
-                        "deck_flashcard": deck_flashcard.id
-                    }
-                ).is_valid(raise_exception=True)
+                new_deck_flashcard_example = {
+                    "example": example.id,
+                    "deck_flashcard": deck_flashcard.id
+                }
 
-                example_relation = DeckFlashcardExampleSerializer(
-                    data={
-                        "example": example.id,
-                        "deck_flashcard": deck_flashcard.id
-                    }
+                flashcard_ex_serializer = DeckFlashcardExampleSerializer(
+                    data=new_deck_flashcard_example
                 )
-                example_relation.is_valid(raise_exception=True)
-                example_relation.save()
+
+                if flashcard_ex_serializer.is_valid(
+                    raise_exception=True
+                ):
+                    flashcard_ex_serializer.save()
 
             # ==========================================
-            # 8. SALVAR TRADUÇÕES
+            # 8. PROCESSAR TRADUÇÕES
             # ==========================================
 
-            for item in translations:
-                text_translation = item.get('textTranslation')
+            for translation_data in translations:
+
+                text_translation = translation_data.get(
+                    'textTranslation'
+                )
 
                 translation = Translation.objects.filter(
                     text_translation=text_translation
                 ).first()
 
                 if not translation:
+                    translation_data = {
+                        'text_translation': text_translation
+                    }
+
                     translation_serializer = TranslationCreateSerializer(
-                        data={
-                            "text_translation": text_translation
-                        }
+                        data=translation_data
                     )
 
-                    translation_serializer.is_valid(raise_exception=True)
-                    translation = translation_serializer.save()
+                    if translation_serializer.is_valid(
+                        raise_exception=True
+                    ):
+                        translation = translation_serializer.save()
 
-                translation_relation = DeckFlashcardTranslationSerializer(
-                    data={
-                        "translation": translation.id,
-                        "deck_flashcard": deck_flashcard.id
-                    }
+                        translation = Translation.objects.get(
+                            text_translation=text_translation
+                        )
+
+                # Mantida a lógica original do relacionamento
+                new_deck_flashcard_translation = {
+                    "translation": translation.id,
+                    "deck_flashcard": deck_flashcard.id
+                }
+
+                new = DeckFlashcardTranslationSerializer(
+                    data=new_deck_flashcard_translation
                 )
 
-                translation_relation.is_valid(raise_exception=True)
-                translation_relation.save()
+                if new.is_valid():
+                    new.save()
 
             # ==========================================
-            # 9. SALVAR PRONÚNCIAS
+            # 9. PROCESSAR PRONÚNCIAS
             # ==========================================
 
-            for item in pronunciations:
-                audio_url = item.get('audioUrl')
+            for pronunciation_data in pronunciations:
+
+                audio_url = pronunciation_data.get('audioUrl')
+                voice_name = pronunciation_data.get('voiceName')
 
                 pronunciation = Pronunciation.objects.filter(
                     keyword=keyword,
@@ -449,10 +469,17 @@ def create_flashcard(request, deckId):
                 ).first()
 
                 if not pronunciation:
-                    pronunciation = Pronunciation.objects.create(
+                    pronunciation = Pronunciation(
                         keyword=keyword,
                         audio_url=audio_url
                     )
+
+                    pronunciation.save()
+
+                    pronunciation = Pronunciation.objects.filter(
+                        keyword=keyword,
+                        audio_url=audio_url
+                    ).first()
 
                 DeckFlashcardPronunciation.objects.create(
                     pronunciation=pronunciation,
@@ -460,18 +487,28 @@ def create_flashcard(request, deckId):
                 )
 
             # ==========================================
-            # 10. SALVAR IMAGENS
+            # 10. PROCESSAR IMAGENS
             # ==========================================
 
-            for item in images:
-                image_url = item.get('imageUrl')
-                description = item.get('description')
+            for image_data in images:
 
-                FlashcardPhoto.objects.get_or_create(
+                image_url = image_data.get('imageUrl')
+                file_description = image_data.get('description')
+
+                photo = FlashcardPhoto.objects.filter(
                     deck_flashcard_id=deck_flashcard.id,
                     file_url=image_url,
-                    file_description=description
-                )
+                    file_description=file_description
+                ).first()
+
+                if not photo:
+                    image = FlashcardPhoto(
+                        deck_flashcard_id=deck_flashcard.id,
+                        file_url=image_url,
+                        file_description=file_description
+                    )
+
+                    image.save()
 
         # ==========================================
         # 11. ATUALIZAR DADOS DO DECK
@@ -479,7 +516,7 @@ def create_flashcard(request, deckId):
 
         threading.Thread(
             target=update_flashcard_data,
-            args=(deckId, user_id)
+            args=(deckId, user_id,)
         ).start()
 
         return JsonResponse({
@@ -492,6 +529,7 @@ def create_flashcard(request, deckId):
             "success": False,
             "error": f"Erro: {str(e)}"
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 
