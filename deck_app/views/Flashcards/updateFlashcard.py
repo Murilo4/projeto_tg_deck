@@ -268,7 +268,7 @@ def update_flashcard_data(flashcard, data):
 
     if keyword and main_phrase:
         pattern = r'\b' + re.escape(keyword) + r'\b'
-        if not re.search(pattern, main_phrase):
+        if not re.search(pattern, main_phrase, re.IGNORECASE):
             raise ValidationError(
                 f"A keyword '{keyword}' não está presente na frase principal.")
 
